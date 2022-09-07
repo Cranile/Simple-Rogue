@@ -191,12 +191,10 @@ class Character extends Entity{
             console.log("tile is solid");
             return false;
         }
-        let interact = this.gameRef.gameMap.isInteractable(newCoords[0],newCoords[1]);
-        if(interact === "struct" || interact === "character"){
-            if(interact === true){
-                this.interact(positionX,positionY); // esto no funciona, esta enviando solo las posiciones direccionales del personaje(en que eje se mueve) y no las coordenadas donde quiere ir
-                return;
-            }
+        let interactableObj;
+        if(this.gameRef.hasEntityOnPos(newCoords[0],newCoords[1]) === true){
+            console.log("interact");
+            return false;
         }
         return newCoords;
     }
@@ -257,48 +255,6 @@ class Player extends Character {
 
     }
 }
-class Bag{
-    constructor(name,bagSize){
-        //the name of this bag
-        this.name = name;
-        //
-        this.bagSize = bagSize;
-        //save the items here
-        this.slots = [];
-        //quick search for items. usefull for finding multiple stacks of the same item.
-        this.dictionary = new Map();
-    }
-
-    update(){
-
-    }
-    expandBag(){
-
-    }
-    reduceBag(){
-
-    }
-    addItem(){
-
-    }
-    removeItem(){
-
-    }
-}
-class Inventory extends Bag{
-    constructor(name,bagSize){
-        super(name,bagSize);
-        
-        //a structure to store the equiped armor, weapons and ammunition
-        //this should be paired with a key(the slot, head, torso, left hand etc.) and the value being the actual equipment
-        this.equipment = new Map();
-    }
-
-    draw(){
-        
-    }
-}
-
 
 class Game {
     //all interactables must be of type entity, NPCs, Items and structures like doors or stairs
@@ -312,6 +268,7 @@ class Game {
         this.tileset = new Image();
         //saves the gameMap Object
         this.gameMap;
+        //this.mapToTile = this.gameMap.mapToTile();
         
         this.player;
 
@@ -412,14 +369,14 @@ class Game {
             "chest":{
                 id: 10,
                 sprite:{"x":160,"y":144,"w":"16","h":"16"},
-                solid: false,
+                solid: true,
                 type:"struct",
                 subtype:"container",
             },
             "bookshelf":{
                 id: 10,
                 sprite:{"x":160,"y":144,"w":"16","h":"16"},
-                solid: false,
+                solid: true,
                 type:"struct",
                 subtype:"misc", //decorations or interactables (levers, buttons, etc)
                 description:"books neatly ordered on a bookshelf",
@@ -443,22 +400,29 @@ class Game {
         this.init();
     }
 
-    init(){
+    async setMap(){
+        return new Promise((resolve) => {
+            resolve( new GameMap(this.tileW,this.tileH,this.scale,this.mapW,this.mapH,this) );
+        });
+    }
+    async init(){
         //Initialize variables or methods
-        
         this.gameCanvas = document.getElementById(this.canvasName);
-        this.gameMap = new GameMap(this.tileW,this.tileH,this.scale,this.mapW,this.mapH,this);
-        
-        this.player = new Player("player",5,5,100,100,undefined,undefined,this.entitiesList.player,this,this.entityCount);
-        this.addNewEntity(this.player);
         
         this.tileset.src = "./colored-transparent_packed.png";
         if(this.gameCanvas === undefined) { 
             console.error("canvas not found"); 
             return;
         }
+        
+        
         this.ctx = this.gameCanvas.getContext("2d");
         this.ctx.scale(this.scale,this.scale);
+        
+        
+        this.gameMap = await this.setMap()
+        
+        let isMapfinish = await this.gameMap.init();
         let canvasSize = this.gameMap.canvasSize;
         
         this.canvasW = canvasSize[0];
@@ -466,16 +430,14 @@ class Game {
         this.gameCanvas.width = canvasSize[0];
         this.gameCanvas.height = canvasSize[1];
         
-        this.ctx.imageSmoothingEnabled = false;
+        this.player = new Player("player",5,5,100,100,undefined,undefined,this.entitiesList.player,this,this.entityCount);
+        this.addNewEntity(this.player);
+        
+        this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
         this.draw();
+        
     }
-    addNewEntity(entity){
-        this.entitiesIndex.set(this.entityCount,entity);
-        this.entityCount ++;
-    }
-    removeEntity(entityID){
-        this.entitiesIndex.delete(entityID);
-    }
+
     update(){
         //Update important data / behaviour
     }
@@ -488,7 +450,9 @@ class Game {
             for(let x = 0; x < this.mapW; x++){
                 
                 this.gameMap.draw(this.ctx,x,y);
-                this.player.draw(this.ctx,x,y);
+                this.entitiesIndex.forEach(entity => {
+                    entity.draw(this.ctx,x,y);
+                });
             }
         }
         if(this.inventoryOpen){
@@ -571,314 +535,68 @@ class Game {
     fetchProject(){
         //get the data needed to start the game
     }
-
-
+    addNewEntity(entity){
+        this.entitiesIndex.set(this.entityCount,entity);
+        this.entityCount ++;
+    }
+    
+    removeEntity(entityID){
+        this.entitiesIndex.delete(entityID);
+    }
+    hasEntityOnPos(coordX,coordY){
+        let tileNumber = this.gameMap.mapToTile(coordX,coordY);
+        let entityTile;
+        let res = false;
+        
+        for(let entity of this.entitiesIndex.entries()){
+            entityTile = this.gameMap.mapToTile(entity[1].positionX,entity[1].positionY);
+            if(tileNumber === entityTile){
+                return true;
+            }
+        }
+        return false;
+    }
 
 }
 
-
-class GameMap{
-    constructor(tileW,tileH,scale,mapW,mapH,game){
-        
-        this.tileW = tileW;
-        this.tileH = tileH;
-
-        this.scale = scale;
-
-        this.mapW = mapW;
-        this.mapH = mapH;
-
-        this.gameRef = game;
-        //saves the layout of the map NOT THE CONTENT!
-        this.gameMapStructure = [];
-        //saves the content of the map, key is tile coordinate , value 
-        this.gameMapContent = new Map();
-
-        this.canvasW;
-        this.canvasH;
-
-        this.playerSpawnPoint;
-        this.blockTypes = {
-            "void":{
-                solid: true,
-                id: 0,
-                className:"void",
-                color:"#000000"
-            },
-            "ground":{
-                solid: false,
-                id: 1,
-                className:"ground",
-                color:"#421616"
-            },
-            "wall":{
-                solid: true,
-                id: 2,
-                className:"wall",
-                sprite:{"x":96,"y":208,"w":"16","h":"16"}
-            },
-
-        }
-        this.blockTypesById = {
-            0: this.blockTypes.void,
-            1: this.blockTypes.ground,
-            2: this.blockTypes.wall,
-        }
-        this.blockList = {};
-
-        this.init();
-    }
-
-    init(){
-        this.setCanvasSize();
-        //create or load map
-        let tempMap = this.generateBoxMap();
-        this.gameMapStructure = tempMap[0];
-        this.gameMapContent = tempMap[1];
+class Bag{
+    constructor(name,bagSize){
+        //the name of this bag
+        this.name = name;
+        //
+        this.bagSize = bagSize;
+        //save the items here
+        this.slots = [];
+        //quick search for items. usefull for finding multiple stacks of the same item.
+        this.dictionary = new Map();
     }
 
     update(){
 
     }
-    draw(ctx,x,y){
-        //choose between raw color and sprite texture
-        //get if tile uses texture by translatting current coordinates to map and check for tile id
-        let currentTileStructure = this.getTileStructure(x,y);
-        if( currentTileStructure.sprite !== undefined){
-            
-            ctx.drawImage(this.gameRef.tileset, 
-            currentTileStructure.sprite.x , currentTileStructure.sprite.y, 
-            currentTileStructure.sprite.w , currentTileStructure.sprite.h,
-            (x*this.tileW) * this.scale,(y*this.tileH) * this.scale,
-            this.tileW * this.scale,this.tileH * this.scale
-            );
-
-        }else{
-            let col = currentTileStructure.color;
-            ctx.beginPath();
-            ctx.rect((x*this.tileW) * this.scale,(y*this.tileH)* this.scale,this.tileW* this.scale, this.tileH* this.scale);
-            ctx.fillStyle = col;
-            ctx.fill();
-        }
-
-        if(this.hasContentOnCoords(x,y) === true){
-            let currentTileContent = this.getTileItem(x,y);
-            ctx.drawImage(this.gameRef.tileset, 
-                currentTileContent.sprite.x , currentTileContent.sprite.y, 
-                currentTileContent.sprite.w , currentTileContent.sprite.h,
-                (x*this.tileW) * this.scale,(y*this.tileH) * this.scale,
-                this.tileW * this.scale,this.tileH * this.scale
-            );
-        }
+    expandBag(){
 
     }
-    createMap(){
-        console.log("new map requested");
-        let cont = 0;
-        let tempMap = [];
-        for(let y= 0; y < this.mapH; y++){
-            for(let x = 0; x < this.mapW; x++){
-                tempMap[ this.tileToMap(x,y)] = cont;
-                if(cont === 3){
-                    cont = 0;
-                }else{
-                    cont ++;
-                }
-            }
-        }
-        return tempMap;
+    reduceBag(){
+
     }
-    generateBoxMap(){
-        console.log("generate box map");
-        let tempMap = [];
-        let tempContent = new Map();
+    addItem(){
 
-        let hasdoor = false; 
-        let hasvoid = false;
-        let hasPlayerSpawn = false;
-        let potions = 0;
-        let hasSword = false;
-        let hasChestplate = false;
-        let hasKey = false;
-        let hasEnemy = false;
+    }
+    removeItem(){
 
-        let randX,randY;
-
-        let coords;
-        for(let y = 0; y < this.mapH; y++){
-            for(let x = 0; x < this.mapW; x++){
-
-                if(x === 0 && y===0 || y === 0 && x === this.mapW -1 || x === 0 && y === this.mapH -1 || x === this.mapW -1 && y===this.mapH -1){
-                    tempMap[this.tileToMap(x,y)] = this.blockTypes.wall.id; //add wall
-                }else if(x === 0 || x === this.mapW -1){
-                    tempMap[this.tileToMap(x,y)] = this.blockTypes.wall.id; //add wall
-                }else if(y === 0 ){
-                    tempMap[this.tileToMap(x,y)] = this.blockTypes.wall.id; //add wall
-                }else if( y === this.mapH -1 ){
-                    tempMap[this.tileToMap(x,y)] = this.blockTypes.wall.id; //add wall
-                }else{
-                    tempMap[this.tileToMap(x,y)] = this.blockTypes.ground.id; //add ground
-                }
-                
-            }
-        }
-
-        /* old implementation, no entity
-        while(!hasdoor){
-            randX = Math.floor(Math.random() * this.mapW);
-            randY = Math.floor(Math.random() * this.mapH);
-            //add door
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                tempContent.set(this.tileToMap(randX,randY),this.gameRef.entitiesList.door.id);
-                hasdoor = true;
-            }
-        }*/
-
-        while(!hasdoor){
-            randX = Math.floor(Math.random() * this.mapW);
-            randY = Math.floor(Math.random() * this.mapH);
-            //add door
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                let newdoor = new Structure("testDoor",randX,randY,10,10,this.gameRef.entitiesList.door,this.gameRef,this.gameRef.entityCount);
-                this.gameRef.addNewEntity(newdoor);
-                tempContent.set(this.tileToMap(randX,randY),newdoor.entitySpecs.id);
-                hasdoor = true;
-            }
-        }
-
-        while(!hasEnemy){
-            randX = Math.floor(Math.random() * this.mapW);
-            randY = Math.floor(Math.random() * this.mapH);
-            //add door
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                let newenemy = new Character("test enemy",randX,randY,10,10,0,0,this.gameRef.entitiesList.goblin,this.gameRef,this.gameRef.entityCount,0);
-                this.gameRef.addNewEntity(newenemy);
-                tempContent.set(this.tileToMap(randX,randY),newenemy.entitySpecs.id);
-                hasEnemy = true;
-            }
-        }
-
-        while(!hasvoid){
-            randX = Math.floor(Math.random() * this.mapW);
-            randY = Math.floor(Math.random() * this.mapH);
-            //add void
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                tempMap[ this.tileToMap(coords[0],coords[1] ) ] = this.blockTypes.void.id;
-                hasvoid = true;
-            }
-        }
+    }
+}
+class Inventory extends Bag{
+    constructor(name,bagSize){
+        super(name,bagSize);
         
-        while(!hasPlayerSpawn){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                this.playerSpawnPoint = coords;
-                hasPlayerSpawn = true;
-            }
-        }
+        //a structure to store the equiped armor, weapons and ammunition
+        //this should be paired with a key(the slot, head, torso, left hand etc.) and the value being the actual equipment
+        this.equipment = new Map();
+    }
+
+    draw(){
         
-        //add stair
-
-        while(potions < 5){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add potion
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                //key is position
-                tempContent.set(this.tileToMap(randX,randY),this.gameRef.entitiesList.potion.id);
-                potions ++;
-            }
-        }
-
-        while(!hasSword){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                tempContent.set(this.tileToMap(randX,randY),this.gameRef.entitiesList.sword.id);
-                hasSword = true;
-            }
-        }
-        while(!hasChestplate){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                tempContent.set(this.tileToMap(randX,randY),this.gameRef.entitiesList.chestPlate.id);
-                hasChestplate = true;
-            }
-        }
-        while(!hasKey){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if( tempMap[this.tileToMap(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                tempContent.set(this.tileToMap(randX,randY),this.gameRef.entitiesList.key.id);
-                hasKey = true;
-            }
-        }
-
-        return [tempMap,tempContent];
-    }
-    tileToMap(x, y){
-        return (this.mapW * y) + x;
-    }
-    setCanvasSize(){
-        this.canvasW = (this.mapW * this.tileW) * this.scale;
-        this.canvasH = (this.mapH * this.tileH) * this.scale;
-    }
-
-    getTileStructIDfromCoords(x,y){ //returns the ID of the block stored on that coordinate
-        return this.gameMapStructure[ this.tileToMap(x, y) ];
-    }
-    getTileContentIDfromCoords(x,y){
-        return this.gameMapContent.get( this.tileToMap(x, y) )
-    }
-
-    getTileContentIDfromTile(tileNumber){
-        return this.gameMapContent.get( tileNumber )
-    }
-
-    hasContentOnCoords(x,y){
-        return this.gameMapContent.has( this.tileToMap(x, y) )
-    }
-
-    getTileStructure(x,y){ //returns the entire block data based on the ID from the coordinate
-        return this.blockTypesById[ this.getTileStructIDfromCoords(x,y)];
-    }
-    getTileItem(x,y){ //returns the data of an item instantiated on the map given a coordinate
-        return this.gameRef.entitiesListById[ this.getTileContentIDfromCoords(x,y) ];
-    }
-
-    removeItemFromMap(x,y){
-        this.gameMapContent.delete( this.tileToMap(x, y));
-        return "ok";
-    }
-
-    isTileSolid(x,y){
-        return this.blockTypesById[ this.getTileStructIDfromCoords(x,y) ].solid ;
-    }
-    isInteractable(x,y){
-        let res = this.gameRef.entitiesListById[ this.getTileContentIDfromCoords(x,y) ];
-        if(res !== undefined){
-            return (res.type);
-        }
-    }
-    requestItemPickupAt(x,y){ //gets coords, deletes item from map and returns item id
-        let item = this.getTileItem(x,y);
-        if(item.type === "item"){
-            this.removeItemFromMap(x,y);
-            return item.id;
-        }
-        return false;
-    }
-    get canvasSize(){
-        return[this.canvasW,this.canvasH];
     }
 }
