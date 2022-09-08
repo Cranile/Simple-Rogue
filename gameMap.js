@@ -69,7 +69,6 @@ class GameMap{
         //get if tile uses texture by translatting current coordinates to map and check for tile id
         let currentTileStructure = this.getTileStructure(x,y);
         if( currentTileStructure.sprite !== undefined){
-            
             ctx.drawImage(this.gameRef.tileset, 
             currentTileStructure.sprite.x , currentTileStructure.sprite.y, 
             currentTileStructure.sprite.w , currentTileStructure.sprite.h,
@@ -87,6 +86,10 @@ class GameMap{
 
         if(this.hasContentOnCoords(x,y) === true){
             let currentTileContent = this.getTileItem(x,y);
+            if(currentTileContent.length > 0){
+                currentTileContent = currentTileContent[0];
+            }
+
             ctx.drawImage(this.gameRef.tileset, 
                 currentTileContent.sprite.x , currentTileContent.sprite.y, 
                 currentTileContent.sprite.w , currentTileContent.sprite.h,
@@ -94,8 +97,8 @@ class GameMap{
                 this.tileW * this.scale,this.tileH * this.scale
             );
         }
-
     }
+    
     createMap(){
         console.log("new map requested");
         let cont = 0;
@@ -158,14 +161,31 @@ class GameMap{
             }
         }*/
 
-        while(!hasdoor){
+        while(hasdoor < 3){
             randX = Math.floor(Math.random() * this.mapW);
             randY = Math.floor(Math.random() * this.mapH);
             //add door
             if( tempMap[this.mapToTile(randX,randY)] === this.blockTypes.ground.id){
                 let newdoor = new Structure("testDoor",randX,randY,10,10,this.gameRef.entitiesList.door,this.gameRef,this.gameRef.entityCount);
                 this.gameRef.addNewEntity(newdoor);
-                hasdoor = true;
+                hasdoor ++;
+                newdoor.setLock();
+                while(!hasKey){
+                    let randX = Math.floor(Math.random() * this.mapW);
+                    let randY = Math.floor(Math.random() * this.mapH);
+                    //add player spawn point
+                    if( tempMap[this.mapToTile(randX,randY)] === this.blockTypes.ground.id){
+                        coords = [ randX , randY ];
+                        let newKey = this.gameRef.getKey(newdoor.getKeyCode());
+                        if(newKey === false){
+                            console.log("failed to create key");
+                            break;
+                        }
+                        tempContent.set(this.mapToTile(randX,randY), newKey);
+                        hasKey = true;
+                    }
+                }
+                hasKey = false;
             }
         }
 
@@ -200,6 +220,7 @@ class GameMap{
                 this.playerSpawnPoint = coords;
                 hasPlayerSpawn = true;
             }
+            
         }
         
         //add stair
@@ -235,16 +256,7 @@ class GameMap{
                 hasChestplate = true;
             }
         }
-        while(!hasKey){
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if( tempMap[this.mapToTile(randX,randY)] === this.blockTypes.ground.id){
-                coords = [ randX , randY ];
-                tempContent.set(this.mapToTile(randX,randY),this.gameRef.entitiesList.key.id);
-                hasKey = true;
-            }
-        }
+
 
         return [tempMap,tempContent];
     }
@@ -275,7 +287,12 @@ class GameMap{
         return this.blockTypesById[ this.getTileStructIDfromCoords(x,y)];
     }
     getTileItem(x,y){ //returns the data of an item instantiated on the map given a coordinate
-        return this.gameRef.entitiesListById[ this.getTileContentIDfromCoords(x,y) ];
+        let content = this.getTileContentIDfromCoords(x,y);
+        if(content.length > 0){            
+             // first goes the item id then the specific interaction key
+             return [this.gameRef.entitiesListById[ content[0] ] , content[1]];
+        }
+        return this.gameRef.entitiesListById[ content ];
     }
 
     removeItemFromMap(x,y){
@@ -294,6 +311,12 @@ class GameMap{
     }
     requestItemPickupAt(x,y){ //gets coords, deletes item from map and returns item id
         let item = this.getTileItem(x,y);
+        if(item.length > 0){
+            if(item[0].type === "item"){
+                this.removeItemFromMap(x,y);
+                return [item[0].id,item[1]];
+            }
+        }
         if(item.type === "item"){
             this.removeItemFromMap(x,y);
             return item.id;

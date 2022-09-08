@@ -59,27 +59,12 @@ class Entity {
         if(this.actualhp > this.maxHp){
             this.actualhp = this.maxHp;
         }
-        console.log(this.name, " HP has changed to: ",this.actualhp);
+        
         
         if(this.actualhp <= 0){
             console.log(this.name, " is dead.");
         }
     }
-
-    pickupItem(){
-        if(this.gameRef.gameMap.hasContentOnCoords(this.positionX,this.positionY)){
-            let newitem = this.gameRef.gameMap.requestItemPickupAt(this.positionX,this.positionY);
-            if(newitem === false){
-                console.log("not item");
-                return;
-            }
-            this.addItemToInventoty(newitem,1)
-            console.log("picked up: ",newitem);
-            return;
-        }
-        console.log("no item to pickup");
-    }
-
 
     attack(){
 
@@ -103,7 +88,7 @@ class Entity {
     }
 
     setName(newName){
-        console.log("name changed from: ",this.name," to: ",newName);
+        
         this.name = newName;
     }
 
@@ -123,6 +108,7 @@ class Character extends Entity{
         this.attackSpeed = attackSpeed;
 
         this.inventory = [];
+        this.keysIndex = []; // store the key indentifier
 
         this.stance = stance; //relation between this entity and player. 0 = enemy , 1 = ally
     }
@@ -130,7 +116,7 @@ class Character extends Entity{
 
     }
     
-    addItemToInventoty(item,ammount){
+    addItemToInventoty(item,ammount,extra){
         let newitem = {
             id:undefined,
             ammount:undefined,
@@ -139,31 +125,32 @@ class Character extends Entity{
         newitem.id = item;
         newitem.ammount = ammount;
         if(this.inventory.length === 0){
-            console.log("inventory is empty, just add");
+            
             this.inventory[0] = newitem;
         }else{
-            console.log("inventoty is not empty, check");
+            
             for(let i = 0;i < this.inventory.length;i++){
                 if(this.inventory[i] === undefined){
-                    console.log("current slot is open, update");
+                    
                     emptySlot = i;
                 }
                 if(this.inventory[i].id === newitem.id){
-                    console.log("duped item, ammount increased");
+                    
                     this.inventory[i].ammount += newitem.ammount;
                     return "ok";
                 }
             }
             if(emptySlot === undefined){
                 //if no free slots have been found, open a new one
-                console.log("current slots are different item type, cant stack, make new");
+                
                 this.inventory[ this.inventory.length ] = newitem;
             }else{
-                console.log("previously used slot is free, add item");
+                
                 this.inventory[ emptySlot ] = newitem;
             }
         }
-        console.log("inventory: ",this.inventory);
+
+        
     }
 
     move(positionX = 0,positionY = 0){
@@ -188,28 +175,103 @@ class Character extends Entity{
         }
 
         if(this.gameRef.gameMap.isTileSolid(newCoords[0],newCoords[1])){
-            console.log("tile is solid");
+            
             return false;
         }
-        let interactableObj;
-        if(this.gameRef.hasEntityOnPos(newCoords[0],newCoords[1]) === true){
-            console.log("interact");
-            return false;
+        let interactableObj = this.gameRef.hasEntityOnPos(newCoords[0],newCoords[1]);
+        if(interactableObj !== false){
+            if(interactableObj.entitySpecs.type === "struct"){
+                if(interactableObj.canPass(this)){
+                    return newCoords;
+                }else{
+                    return false;
+                }
+            }
+            if(interactableObj.entitySpecs.type === "character"){
+                console.log("character");
+            }
         }
         return newCoords;
+    }
+
+    pickupItem(){
+        if(this.gameRef.gameMap.hasContentOnCoords(this.positionX,this.positionY)){
+            let newitem = this.gameRef.gameMap.requestItemPickupAt(this.positionX,this.positionY);
+            if(newitem === false){
+                console.log("not item");
+                return;
+            }
+            if(newitem.length > 0){
+                this.keysIndex[ this.keysIndex.length ] = newitem[1];
+                newitem = newitem[0]
+            }
+            this.addItemToInventoty(newitem,1)
+            return;
+        }
+        console.log("no item to pickup");
+    }
+
+    hasKey(keycode){
+        for(let i = 0; i < this.keysIndex.length ; i++){
+            if(this.keysIndex[i] === keycode){
+                return true;
+            }
+        }
+        return false;
     }
 }
 class Structure extends Entity{
     constructor(name="Character",x,y,maxhp,currentHp,entityType,game,globalID){
         super(name,x,y,maxhp,currentHp,entityType,game,globalID);
         
+        this.isSolid = false;
         this.locked = false;
+        this.keyPairCode = undefined;
     }
-
+    
     action(){ //how this element reacts when interacted with
         if(this.locked){
 
         }
+    }
+    
+    canPass(entity){
+        
+        if(this.isSolid){
+            
+            return false;
+        }
+        if(this.locked === false){
+            
+            return true;
+        }
+        if(this.locked){
+            if(entity.hasKey(this.keyPairCode)){
+                console.log("usas la llave para abrir la puerta");
+                return true;
+            }
+            if(entity.keysIndex.length > 0){
+                console.log("ninguna de tus llaves funciona con esta puerta.");
+            }else{
+                console.log("te falta una llave para poder pasar");
+            }
+            return false;
+        }
+        return ;
+    }
+    setIsSolid(boolean){
+        this.isSolid = boolean;
+    }
+    setLock(){
+        this.keyPairCode = this.gameRef.addNewKey();
+        this.locked = true;
+    }
+    setUnlock(){
+        this.locked = false;
+    }
+    getKeyCode(){
+        
+        return this.keyPairCode;
     }
 }
 
@@ -245,7 +307,7 @@ class Player extends Character {
             this.pickupItem();
         }
         if(event.code === "KeyI"){
-            console.log("open inventory");
+            
             this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
         }
     }
@@ -274,6 +336,9 @@ class Game {
 
         this.entitiesIndex = new Map(); //this keeps a list of all the currently instantiated entities, enemies, allies, structures(interactables like doors) and the player | delete from index when instance is removed
         this.entityCount = 0;
+
+        this.keysIndex = new Map();
+        this.keyCount = 0;
         //size of tiles on PX
         this.tileW = tileW;
         this.tileH = tileH;
@@ -535,6 +600,7 @@ class Game {
     fetchProject(){
         //get the data needed to start the game
     }
+
     addNewEntity(entity){
         this.entitiesIndex.set(this.entityCount,entity);
         this.entityCount ++;
@@ -551,12 +617,25 @@ class Game {
         for(let entity of this.entitiesIndex.entries()){
             entityTile = this.gameMap.mapToTile(entity[1].positionX,entity[1].positionY);
             if(tileNumber === entityTile){
-                return true;
+                return entity[1];
             }
         }
         return false;
     }
-
+    addNewKey(){
+        let newKey = this.keyCount;
+        this.keysIndex.set(newKey,this.entitiesList.key.id)
+        this.keyCount++;
+        return newKey;
+    }
+    getKey(keycode){
+        
+        if(this.keysIndex.has(keycode)){
+            
+            return  [this.keysIndex.get(keycode),keycode];
+        }
+        return false;
+    }
 }
 
 class Bag{
