@@ -1,11 +1,11 @@
-function getFiles(){
+function getFiles() {
     let [file] = document.querySelector('input[type=file]').files;
     let fileReader = new FileReader();
     let jsonData;
 
     fileReader.readAsText(file);
 
-    fileReader.addEventListener("load", () =>{
+    fileReader.addEventListener("load", () => {
         jsonData = JSON.parse(fileReader.result);
         convertFiles(jsonData);
         console.log(jsonData);
@@ -13,6 +13,6 @@ function getFiles(){
 
 }
 
-function convertFiles(file){
+function convertFiles(file) {
 
 }
