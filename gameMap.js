@@ -78,9 +78,9 @@ class GameMap{
 
         }else{
             let col = currentTileStructure.color;
+            ctx.fillStyle = col;
             ctx.beginPath();
             ctx.rect((x*this.tileW) * this.scale,(y*this.tileH)* this.scale,this.tileW* this.scale, this.tileH* this.scale);
-            ctx.fillStyle = col;
             ctx.fill();
         }
 
@@ -166,7 +166,8 @@ class GameMap{
             randY = Math.floor(Math.random() * this.mapH);
             //add door
             if( tempMap[this.mapToTile(randX,randY)] === this.blockTypes.ground.id){
-                let newdoor = new Structure("testDoor",randX,randY,10,10,this.gameRef.entitiesList.door,this.gameRef,this.gameRef.entityCount);
+                let doorName = "Door" + hasdoor * 1;
+                let newdoor = new Structure(doorName,randX,randY,this.gameRef.entitiesList.door,this.gameRef.characterTypes.struct,this.gameRef,this.gameRef.entityCount);
                 this.gameRef.addNewEntity(newdoor);
                 hasdoor ++;
                 newdoor.setLock();
@@ -194,7 +195,8 @@ class GameMap{
             randY = Math.floor(Math.random() * this.mapH);
             //add door
             if( tempMap[this.mapToTile(randX,randY)] === this.blockTypes.ground.id){
-                let newenemy = new Character("test enemy",randX,randY,10,10,0,0,this.gameRef.entitiesList.goblin,this.gameRef,this.gameRef.entityCount,0);
+                let newenemy = new Character("test enemy",randX,randY,this.gameRef.entitiesList.goblin,this.gameRef.characterTypes.rogue,this.gameRef,this.gameRef.entityCount);
+                newenemy.setStanceToPlayer("enemy");
                 this.gameRef.addNewEntity(newenemy);
                 hasEnemy = true;
             }

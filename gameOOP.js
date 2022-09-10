@@ -1,8 +1,12 @@
 class Entity {
-    constructor(name="entity",x=0,y=0,maxHp,currentHp,entityType,game,globalID) {
+    constructor(name="entity",x=0,y=0,entityType,charType,game,globalID) {
         this.name = name;
-        this.maxHp = maxHp;
-        this.currentHp = currentHp;
+
+        this.baseHp = charType.hp;
+        this.maxHp = charType.hp;
+        this.currentHp = this.maxHp;
+
+        this.maxMp = charType.mp;
 
         this.entityGlobalID=globalID;
         this.positionX = x;
@@ -60,24 +64,39 @@ class Entity {
             this.actualhp = this.maxHp;
         }
         
-        
         if(this.actualhp <= 0){
             console.log(this.name, " is dead.");
         }
+        
     }
 
-    attack(){
+    attackOnSelf(damageInput){
+        if( damageInput > 0){
+            this.currentHp -= damageInput;
+            console.log(this.name, "recieved:", damageInput, " damage");
+        }
 
+        if(this.currentHp <= 0){
+            console.log(this.name," is dead.");
+        }
+    }
+    attackOnOther(damageOutput,target){
+        if(damageOutput === undefined || target === undefined){
+            console.error("Parameters cant be undefined",damageOutput,target);
+            return;
+        }
+        target.attackOnSelf(damageOutput);
     }
 
     get position(){
         return [this.positionX,this.positionY];
     }
-
+    get currentHealth(){
+        return [this.currentHp];
+    }
     get health(){
         return [this.currentHp,this.maxHp]
     }
-
     get readDescription(){
         if(this.description !== undefined){
             return this.description;
@@ -86,36 +105,50 @@ class Entity {
     getName(){
         return this.name;
     }
-
     setName(newName){
         
         this.name = newName;
     }
-
     set maxHealth(hp){
         this.maxHp = hp;
     }
-
     set description(text){
         this.description = text;
     }
 }
 
 class Character extends Entity{
-    constructor(name="Character",x,y,maxhp,currentHp,damage=0,attackSpeed=0,entityType,game,globalID,stance){
-        super(name,x,y,maxhp,currentHp,entityType,game,globalID);
-        this.damage = damage;
-        this.attackSpeed = attackSpeed;
+    constructor(name="Character",x,y,entityType,charType,game,globalID){
+        super(name,x,y,entityType,charType,game,globalID);
+        
+        this.baseDmg = charType.dmg;
+        this.baseSpd = charType.spd;
+
+        this.actualDmg = this.baseDmg;
+        this.actualSpd = this.baseSpd;
 
         this.inventory = [];
+        this.chestArmorLvl = 0;
+        this.weaponLvl = 0;
+
         this.keysIndex = []; // store the key indentifier
 
-        this.stance = stance; //relation between this entity and player. 0 = enemy , 1 = ally
     }
     init(){
 
     }
-    
+    setStanceToPlayer(stance){
+        if(stance === "enemy"){
+            this.stance = "enemy";
+            console.log("this character is now enemy of the player");
+            return;
+        }else if(stance === "ally"){
+            this.stance = "ally";
+            console.log("this character is now ally to the player");
+            return;
+        }
+        console.log("wrong stance parameter, not set.", stance);
+    }
     addItemToInventoty(item,ammount,extra){
         let newitem = {
             id:undefined,
@@ -137,7 +170,7 @@ class Character extends Entity{
                 if(this.inventory[i].id === newitem.id){
                     
                     this.inventory[i].ammount += newitem.ammount;
-                    return "ok";
+                    
                 }
             }
             if(emptySlot === undefined){
@@ -149,10 +182,32 @@ class Character extends Entity{
                 this.inventory[ emptySlot ] = newitem;
             }
         }
-
-        
+        let tempItem = this.gameRef.entitiesListById[item];
+        if(tempItem.subtype === "equipable"){
+            console.log("equip");
+            this.addItemStats(tempItem)
+        }
     }
-
+    addItemStats(item){
+        if(item.category === "armor"){
+            if(item.stats.level < this.chestArmorLvl){
+                console.log("new item is worse than already equiped");
+                return;
+            }
+            this.chestArmorLvl = item.stats.level;
+            this.maxHp = this.baseHp + item.stats.health;
+            this.currentHp = this.maxHp;
+        }
+        if(item.category === "weapon"){
+            if(item.stats.level < this.weaponLvl){
+                console.log("new item is worse than already equiped");
+                return;
+            }
+            this.weaponLvl = item.stats.level;
+            this.actualDmg = this.baseDmg + item.stats.damage;
+            this.actualSpd = this.baseSpd + item.stats.speed;
+        }
+    }
     move(positionX = 0,positionY = 0){
         let newCoords = this.calculateMovingCoords(positionX,positionY);
         if(newCoords === false){
@@ -189,6 +244,8 @@ class Character extends Entity{
             }
             if(interactableObj.entitySpecs.type === "character"){
                 console.log("character");
+                this.interact(interactableObj);
+                return false;
             }
         }
         return newCoords;
@@ -221,8 +278,8 @@ class Character extends Entity{
     }
 }
 class Structure extends Entity{
-    constructor(name="Character",x,y,maxhp,currentHp,entityType,game,globalID){
-        super(name,x,y,maxhp,currentHp,entityType,game,globalID);
+    constructor(name="Character",x,y,entityType,charType,game,globalID){
+        super(name,x,y,entityType,charType,game,globalID);
         
         this.isSolid = false;
         this.locked = false;
@@ -276,8 +333,8 @@ class Structure extends Entity{
 }
 
 class Player extends Character {
-    constructor(name,x,y,maxhp,currentHp,damage=0,attackSpeed=0,entityType,game,globalID){
-        super(name,x,y,maxhp,currentHp,damage,attackSpeed,entityType,game,globalID);
+    constructor(name,x,y,entityType,charType,game,globalID){
+        super(name,x,y,entityType,charType,game,globalID);
         
     }
 
@@ -312,9 +369,26 @@ class Player extends Character {
         }
     }
 
-    interact(targetX,targetY){        
-        console.log("interact: ",targetX,targetY);
+    interact(target){        
+        if(target === undefined){
+            console.error("entity undefined");
+            return;
+        }
 
+        if(target.stance === "enemy"){
+            if(target.currentHealth <= 0){
+                console.log("enemy is already dead, loot?");
+                return;
+            }
+            this.attackOnOther(this.actualDmg,target);
+            return;
+        }
+        
+        if(target.stance === "ally"){
+            console.log("ally");
+
+        }
+        return;
     }
 }
 
@@ -356,6 +430,7 @@ class Game {
         this.ctx;
 
         this.inventoryOpen = false;
+        this.characterOpen = false;
         //these two should be the same
         this.entitiesList = {
             //all Mob type entities should appear in mayus
@@ -394,21 +469,33 @@ class Game {
                 sprite:{"x":528,"y":208,"w":"16","h":"16"},
                 color:"red",
                 type:"item",
-                subtype:"consumible"
+                subtype:"consumible",
+                heal:5,
             },
             "sword":{
                 id: 6,
                 sprite:{"x":560,"y":112,"w":"16","h":"16"},
                 color:"gray",
                 type:"item",
-                subtype:"weapon"
+                subtype:"equipable",
+                category:"weapon",
+                stats:{
+                    level:1,
+                    damage:2,
+                    speed:-1,
+                }
             },
             "chestPlate":{
                 id: 7,
                 sprite:{"x":512,"y":16,"w":"16","h":"16"},
                 color:"orange",
                 type:"item",
-                subtype:"armor"
+                subtype:"equipable",
+                category:"armor",
+                stats:{
+                    level:1,
+                    health:5,
+                }
             },
             "key":{
                 id: 8,
@@ -461,7 +548,32 @@ class Game {
             9:this.entitiesList.door,
             10:this.entitiesList.stair,
         };
-
+        this.characterTypes = {
+            "warrior":{
+                "hp":25,
+                "mp":5,
+                "dmg":5,
+                "spd":5,
+            },
+            "rogue":{
+                "hp":8,
+                "mp":5,
+                "dmg":10,
+                "spd":10,
+            },
+            "mage":{
+                "hp":10,
+                "mp":15,
+                "dmg":5,
+                "spd":8,
+            },
+            "struct":{
+                "hp":50,
+                "mp":0,
+                "dmg":0,
+                "spd":0,
+            }
+        }
         this.init();
     }
 
@@ -495,7 +607,7 @@ class Game {
         this.gameCanvas.width = canvasSize[0];
         this.gameCanvas.height = canvasSize[1];
         
-        this.player = new Player("player",5,5,100,100,undefined,undefined,this.entitiesList.player,this,this.entityCount);
+        this.player = new Player("player",5,5,this.entitiesList.player,this.characterTypes.warrior,this,this.entityCount);
         this.addNewEntity(this.player);
         
         this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
@@ -520,6 +632,7 @@ class Game {
                 });
             }
         }
+        // INVENTORY UI
         if(this.inventoryOpen){
 
             let invSlots = 20;
@@ -594,6 +707,40 @@ class Game {
             }
 
         }
+        if(this.characterOpen){
+
+        }
+        // HEALTH BAR
+        let originX = (this.canvasW * 90) / 100; 
+        let originY = (this.canvasH * 2) / 100;
+        let healthWidth = 100,healthHeight = 20;
+        this.ctx.beginPath();
+        this.ctx.fillStyle = "gray";
+        this.ctx.rect(originX,originY,healthWidth,healthHeight);
+        this.ctx.fill();
+
+        
+        let hp = this.player.health;
+        //hp[0] = current health, hp[1] max health
+        let percent = ((hp[1] - hp[0]) * 100) / hp[1];
+        let filler = healthWidth - percent;
+        this.ctx.beginPath();
+        this.ctx.fillStyle = "red";
+        this.ctx.rect(originX,originY,filler,healthHeight);
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeStyle = "#ffffff";
+        this.ctx.rect(originX+1,originY+1,healthWidth+1,healthHeight+1);
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.font = "16px Arial";
+        this.ctx.fillStyle = "black";
+        let text = hp[0] + " / " + hp[1];
+        this.ctx.fillText(text,originX +2,originY + 19);
+
         requestAnimationFrame(() => this.draw());
     }
 
