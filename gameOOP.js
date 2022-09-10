@@ -345,41 +345,45 @@ class Player extends Character {
     }
 
     getKey(event) {
-        if (event.code === "KeyW") {
-            this.move(0, -1);
+        let openMenu = (menues, menu) => {
+            for (const [name, value] of Object.entries(menues)) {
+                if (name === menu) {
+                    menues[name] = !value;
+                    continue;
+                }
 
-        } else if (event.code === "KeyS") {
-            this.move(0, 1);
-        }
-
-        if (event.code === "KeyD") {
-            this.move(1);
-
-        } else if (event.code === "KeyA") {
-            this.move(-1);
-
-        }
-
-        if (event.code === "KeyE") {
-            this.pickupItem();
-        }
-        if (event.code === "KeyC") {
-            console.log("character sheet");
-            if (this.gameRef.inventoryOpen) {
-                this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
+                menues[name] = false;
             }
-            this.gameRef.characterOpen = !this.gameRef.characterOpen;
-        }
-        if (event.code === "KeyI") {
-            if (this.gameRef.characterOpen) {
-                this.gameRef.characterOpen = !this.gameRef.characterOpen;
-            }
-            this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
         }
 
-        // quick toggle fields of view
-        if (event.code === "KeyF") {
-            this.gameRef.fov = this.gameRef.fov < 1000 ? 1000 : 5;
+        switch (event.code) {
+            case "KeyW":
+                this.move(0, -1);
+                break;
+            case "KeyS":
+                this.move(0, 1);
+                break;
+            case "KeyD":
+                this.move(1);
+                break;
+            case "KeyA":
+                this.move(-1);
+                break;
+            case "KeyE":
+                this.pickupItem();
+                break;
+            case "KeyC":
+                openMenu(this.gameRef.menues, "character");
+                break;
+            case "KeyI":
+                openMenu(this.gameRef.menues, "inventory");
+                break;
+            // quick toggle fields of view
+            case "KeyF":
+                this.gameRef.fov = this.gameRef.fov < 1000 ? 1000 : 5;
+                break;
+            default:
+                break;
         }
     }
 
@@ -444,10 +448,11 @@ class Game {
         this.ctx;
 
         this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
-        this.inventoryOpen = false;
-        this.characterOpen = false;
-        //all of the objects lists should be generated partially dynamically, the ids and the mirror list "ByID" and the coordinates of the sprites should be created by the machine.
-        //the rest of the parameters should be manually input.
+        this.menues = {
+            "inventory": false,
+            "character": false
+        }
+        //these two should be the same
         this.entitiesList = {
             //all Mob type entities should appear in mayus
             "player": {
@@ -600,24 +605,7 @@ class Game {
                 }
             },
         };
-        this.entitiesListById = {
-            //all Mob type entities should appear in mayus
-            0: this.entitiesList.player,
-            1: this.entitiesList.goblin,
-            2: this.entitiesList.wizard,
-            3: this.entitiesList.necromancer,
-            4: this.entitiesList.skeleton,
-            5: this.entitiesList.potion,
-            6: this.entitiesList.sword,
-            7: this.entitiesList.chestPlate,
-            8: this.entitiesList.key,
-            9: this.entitiesList.door,
-            10: this.entitiesList.stair,
-            11: this.entitiesList.axe,
-            12: this.entitiesList.hero_sword,
-            13: this.entitiesList.iron_chestplate,
-            14: this.entitiesList.steel_chestplate,
-        };
+        this.entitiesListById = Object.values(this.entitiesList);
         this.characterTypes = {
             "warrior": {
                 "hp": 25,
@@ -712,124 +700,15 @@ class Game {
             }
         }
         // INVENTORY UI
-        if (this.inventoryOpen) {
-
-            let invSlots = 20;
-            let invSlotSize = 48; //px
-            let innerPadding = 6; //px
-            let padding = 5;//px
-
-            let originX = 0;
-            let originY = 0;
-
-            let endX = originX + padding * 2;
-            let endY = originY + padding * 2;
-
-            let maxSlotWidth = originX + invSlotSize + padding * 2 + innerPadding;
-            let count = 1;
-            let width = (this.canvasW * 30) / 100;
-            let height = (this.canvasH * 60) / 100;
-
-            //inventory bg
-            let col = this.ctx.createLinearGradient(0, 0, width, 0);
-            col.addColorStop(0, "#2d1818");
-            col.addColorStop(0.2, "#4d3131");
-            col.addColorStop(0.5, "#5b4848");
-            col.addColorStop(0.7, "#4d3131");
-            col.addColorStop(1, "#2d1818");
-
-            this.ctx.beginPath();
-            this.ctx.fillStyle = col;
-            this.ctx.rect(originX, originY, width, height);
-            this.ctx.fill();
-            this.ctx.lineWidth = padding;
-            this.ctx.strokeStyle = "black";
-            this.ctx.stroke();
-
-            for (let i = 0; i < invSlots; i++) {
-                this.ctx.beginPath();
-                this.ctx.fillStyle = col;
-                this.ctx.rect(endX, endY, invSlotSize + innerPadding, invSlotSize + innerPadding);
-                this.ctx.lineWidth = padding;
-                this.ctx.stroke();
-
-                if (this.player.inventory[i]) {
-                    let itemspr = this.entitiesListById[this.player.inventory[i].id];
-                    //console.log(itemspr);
-                    this.ctx.drawImage(this.tileset,
-                        itemspr.sprite.x, itemspr.sprite.y,
-                        itemspr.sprite.w, itemspr.sprite.h,
-                        endX + (innerPadding / 2), endY + (innerPadding / 2),
-                        invSlotSize, invSlotSize
-                    );
-                    let font = invSlotSize / 2 + "px Arial";
-                    this.ctx.font = font;
-                    this.ctx.fillStyle = "white";
-                    this.ctx.fillText(
-                        this.player.inventory[i].ammount,
-                        (endX + invSlotSize + innerPadding) - this.ctx.measureText("1").width,
-                        (endY + invSlotSize)
-                    );
-
-
-                }
-
-                if (Math.floor(width / maxSlotWidth) <= count) {
-                    endX = originX + padding * 2;
-                    endY = endY + invSlotSize + (padding * 2) + innerPadding;
-                    count = 1;
-                } else {
-                    count++;
-                    endX = endX + invSlotSize + (padding * 2) + innerPadding;
-                }
-
-            }
-
+        if (this.menues.inventory) {
+            let inventoryModal = new InventoryModal(this.ctx, this.canvasW, this.canvasH);
+            inventoryModal.withContext({
+                player: this.player, entitiesListById: this.entitiesListById, tileset: this.tileset
+            }).draw();
         }
-        if (this.characterOpen) {
-            let padding = 5;//px
-
-            let originX = 0;
-            let originY = 0;
-
-            let width = (this.canvasW * 30) / 100;
-            let height = (this.canvasH * 60) / 100;
-
-            //inventory bg
-            let col = this.ctx.createLinearGradient(0, 0, width, 0);
-            col.addColorStop(0, "#2d1818");
-            col.addColorStop(0.2, "#4d3131");
-            col.addColorStop(0.5, "#5b4848");
-            col.addColorStop(0.7, "#4d3131");
-            col.addColorStop(1, "#2d1818");
-
-            this.ctx.beginPath();
-            this.ctx.fillStyle = col;
-            this.ctx.rect(originX, originY, width, height);
-            this.ctx.fill();
-            this.ctx.lineWidth = padding;
-            this.ctx.strokeStyle = "black";
-            this.ctx.stroke();
-
-            this.ctx.beginPath();
-            this.ctx.font = "30px Arial";
-            this.ctx.fillStyle = "black";
-            let text = "character sheet";
-            this.ctx.fillText(text, originX + 6, originY + 32);
-
-            this.ctx.font = "20px Arial";
-            text = "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg;
-            this.ctx.fillText(text, originX + 6, originY + 32 * 2);
-            text = "weapon level: " + this.player.weaponLvl;
-            this.ctx.fillText(text, originX + 6, originY + 32 * 3);
-
-            text = "base health: " + this.player.baseHp + " + " + (this.player.maxHp - this.player.baseHp) + " = " + this.player.maxHp;
-            this.ctx.fillText(text, originX + 6, originY + 32 * 4);
-            text = "armor level: " + this.player.chestArmorLvl;
-            this.ctx.fillText(text, originX + 6, originY + 32 * 5);
-
-            text = "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd;
-            this.ctx.fillText(text, originX + 6, originY + 32 * 6);
+        if (this.menues.character) {
+            let characterModal = new CharacterModal(this.ctx, this.canvasW, this.canvasH);
+            characterModal.withContext({ player: this.player }).draw();
         }
         // HEALTH BAR
 
@@ -949,5 +828,159 @@ class Inventory extends Bag {
 
     draw() {
 
+    }
+}
+
+class Modal {
+
+    constructor(ctx, canvasW, canvasH) {
+        this.ctx = ctx;
+        this.canvasW = canvasW;
+        this.canvasH = canvasH;
+    }
+
+    withContext(context) {
+        const attributes = Object.entries(context);
+        for (const [name, attribute] of attributes) {
+            this[name] = attribute
+        }
+        return this;
+    }
+}
+
+class InventoryModal extends Modal {
+    draw() {
+        let invSlots = 20;
+        let invSlotSize = 48; //px
+        let innerPadding = 6; //px
+        let padding = 5;//px
+
+        let originX = 0;
+        let originY = 0;
+
+        let endX = originX + padding * 2;
+        let endY = originY + padding * 2;
+
+        let maxSlotWidth = originX + invSlotSize + padding * 2 + innerPadding;
+        let count = 1;
+        let width = (this.canvasW * 30) / 100;
+        let height = (this.canvasH * 60) / 100;
+
+        //inventory bg
+        this.setBackgroundStyle(width);
+        this.drawBackground(width, height, originX, originY, padding);
+
+        for (let i = 0; i < invSlots; i++) {
+            this.ctx.beginPath();
+            this.ctx.fillStyle = this.backgroundStyle;
+            this.ctx.rect(endX, endY, invSlotSize + innerPadding, invSlotSize + innerPadding);
+            this.ctx.lineWidth = padding;
+            this.ctx.stroke();
+
+            if (this.player.inventory[i]) {
+                let itemspr = this.entitiesListById[this.player.inventory[i].id];
+                //console.log(itemspr);
+                this.ctx.drawImage(this.tileset,
+                    itemspr.sprite.x, itemspr.sprite.y,
+                    itemspr.sprite.w, itemspr.sprite.h,
+                    endX + (innerPadding / 2), endY + (innerPadding / 2),
+                    invSlotSize, invSlotSize
+                );
+                let font = invSlotSize / 2 + "px Arial";
+                this.ctx.font = font;
+                this.ctx.fillStyle = "white";
+                this.ctx.fillText(
+                    this.player.inventory[i].ammount,
+                    (endX + invSlotSize + innerPadding) - this.ctx.measureText("1").width,
+                    (endY + invSlotSize)
+                );
+            }
+
+            if (Math.floor(width / maxSlotWidth) <= count) {
+                endX = originX + padding * 2;
+                endY = endY + invSlotSize + (padding * 2) + innerPadding;
+                count = 1;
+            } else {
+                count++;
+                endX = endX + invSlotSize + (padding * 2) + innerPadding;
+            }
+        }
+    }
+
+    setBackgroundStyle(width) {
+        let col = this.ctx.createLinearGradient(0, 0, width, 0);
+        col.addColorStop(0, "#2d1818");
+        col.addColorStop(0.2, "#4d3131");
+        col.addColorStop(0.5, "#5b4848");
+        col.addColorStop(0.7, "#4d3131");
+        col.addColorStop(1, "#2d1818");
+        this.backgroundStyle = col;
+    }
+
+    drawBackground(width, height, originX, originY, padding) {
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.backgroundStyle;
+        this.ctx.rect(originX, originY, width, height);
+        this.ctx.fill();
+        this.ctx.lineWidth = padding;
+        this.ctx.strokeStyle = "black";
+        this.ctx.stroke();
+    }
+}
+
+class CharacterModal extends Modal {
+    draw() {
+        let padding = 5;//px
+
+        let originX = 0;
+        let originY = 0;
+
+        let width = (this.canvasW * 30) / 100;
+        let height = (this.canvasH * 60) / 100;
+
+        //inventory bg
+        this.setBackgroundStyle(width);
+        this.drawBackground(width, height, originX, originY, padding);
+
+        this.ctx.beginPath();
+        this.ctx.font = "30px Arial";
+        this.ctx.fillStyle = "black";
+
+        let text = "character sheet";
+        this.ctx.fillText(text, originX + 6, originY + 32);
+
+        this.ctx.font = "20px Arial";
+
+        let texts = [
+            "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg,
+            "weapon level: " + this.player.weaponLvl,
+            "base health: " + this.player.baseHp + " + " + (this.player.maxHp - this.player.baseHp) + " = " + this.player.maxHp,
+            "armor level: " + this.player.chestArmorLvl,
+            "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd
+        ]
+
+        for (const [i, text] of texts.entries()) {
+            this.ctx.fillText(text, originX + 6, originY + 32 * (i + 2));
+        }
+    }
+
+    setBackgroundStyle(width) {
+        let col = this.ctx.createLinearGradient(0, 0, width, 0);
+        col.addColorStop(0, "#2d1818");
+        col.addColorStop(0.2, "#4d3131");
+        col.addColorStop(0.5, "#5b4848");
+        col.addColorStop(0.7, "#4d3131");
+        col.addColorStop(1, "#2d1818");
+        this.backgroundStyle = col;
+    }
+
+    drawBackground(width, height, originX, originY, padding) {
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.backgroundStyle;
+        this.ctx.rect(originX, originY, width, height);
+        this.ctx.fill();
+        this.ctx.lineWidth = padding;
+        this.ctx.strokeStyle = "black";
+        this.ctx.stroke();
     }
 }
