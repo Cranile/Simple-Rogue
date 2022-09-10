@@ -363,8 +363,17 @@ class Player extends Character {
         if(event.code === "KeyE"){
             this.pickupItem();
         }
+        if(event.code === "KeyC"){
+            console.log("character sheet");
+            if(this.gameRef.inventoryOpen){
+                this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
+            }
+            this.gameRef.characterOpen = !this.gameRef.characterOpen;
+        }
         if(event.code === "KeyI"){
-            
+            if(this.gameRef.characterOpen){
+                this.gameRef.characterOpen = !this.gameRef.characterOpen;
+            }
             this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
         }
     }
@@ -660,20 +669,20 @@ class Game {
             col.addColorStop(1, "#2d1818");
             
             this.ctx.beginPath();
-            this.ctx.rect(originX,originY,width,height);
             this.ctx.fillStyle = col;
+            this.ctx.rect(originX,originY,width,height);
             this.ctx.fill();
             this.ctx.lineWidth = padding;
+            this.ctx.strokeStyle = "black";
             this.ctx.stroke();
 
             for(let i=0; i<invSlots; i++){
                 this.ctx.beginPath();
+                this.ctx.fillStyle = col;
                 this.ctx.rect(endX,endY,invSlotSize+innerPadding,invSlotSize+innerPadding);
                 this.ctx.lineWidth = padding;
                 this.ctx.stroke();
 
-                
-                
                 if(this.player.inventory[i]){
                     let itemspr = this.entitiesListById[ this.player.inventory[i].id ];
                     //console.log(itemspr);
@@ -708,9 +717,53 @@ class Game {
 
         }
         if(this.characterOpen){
+            let padding = 5;//px
 
+            let originX=0;
+            let originY=0;
+
+            let width = (this.canvasW * 30) / 100;
+            let height = (this.canvasH * 60) / 100;
+            
+            //inventory bg
+            let col = this.ctx.createLinearGradient(0, 0, width, 0);
+            col.addColorStop(0, "#2d1818");
+            col.addColorStop(0.2, "#4d3131");
+            col.addColorStop(0.5, "#5b4848");
+            col.addColorStop(0.7, "#4d3131");
+            col.addColorStop(1, "#2d1818");
+            
+            this.ctx.beginPath();
+            this.ctx.fillStyle = col;
+            this.ctx.rect(originX,originY,width,height);
+            this.ctx.fill();
+            this.ctx.lineWidth = padding;
+            this.ctx.strokeStyle = "black";
+            this.ctx.stroke();
+
+            this.ctx.beginPath();
+            this.ctx.font = "30px Arial";
+            this.ctx.fillStyle = "black";
+            let text = "character sheet";
+            this.ctx.fillText(text,originX + 6,originY + 32);
+
+            this.ctx.font = "20px Arial";
+            text = "base damage: "+ this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg ) + " = "+ this.player.actualDmg;
+            this.ctx.fillText(text,originX + 6,originY + 32 * 2);
+            text = "weapon level: " + this.player.weaponLvl;
+            this.ctx.fillText(text,originX + 6,originY + 32 * 3);
+
+            text = "base health: "+ this.player.baseHp + " + " + (this.player.maxHp - this.player.baseHp ) + " = "+ this.player.maxHp;
+            this.ctx.fillText(text,originX + 6,originY + 32 * 4);
+            text = "armor level: " + this.player.chestArmorLvl;
+            this.ctx.fillText(text,originX + 6,originY + 32 * 5);
+
+            text = "base attack speed: "+ this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd ) + " = "+ this.player.actualSpd;
+            this.ctx.fillText(text,originX + 6,originY + 32 * 6);
         }
         // HEALTH BAR
+        
+        //background
         let originX = (this.canvasW * 90) / 100; 
         let originY = (this.canvasH * 2) / 100;
         let healthWidth = 100,healthHeight = 20;
@@ -719,7 +772,7 @@ class Game {
         this.ctx.rect(originX,originY,healthWidth,healthHeight);
         this.ctx.fill();
 
-        
+        //health bar
         let hp = this.player.health;
         //hp[0] = current health, hp[1] max health
         let percent = ((hp[1] - hp[0]) * 100) / hp[1];
@@ -729,12 +782,14 @@ class Game {
         this.ctx.rect(originX,originY,filler,healthHeight);
         this.ctx.fill();
 
+        //border
         this.ctx.beginPath();
         this.ctx.lineWidth = 3;
         this.ctx.strokeStyle = "#ffffff";
         this.ctx.rect(originX+1,originY+1,healthWidth+1,healthHeight+1);
         this.ctx.stroke();
 
+        //health numbers
         this.ctx.beginPath();
         this.ctx.font = "16px Arial";
         this.ctx.fillStyle = "black";
