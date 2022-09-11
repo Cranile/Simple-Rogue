@@ -16,10 +16,14 @@ class GameMap {
         //saves the content of the map, key is tile coordinate , value 
         this.gameMapContent = new Map();
 
+
         this.canvasW;
         this.canvasH;
 
         this.playerSpawnPoint;
+        //blocktypes should only save the basic data of the TYPES of blocks, no the blocks themselves, eg: wall is a type, stone wall is a block OF TYPE wall
+        //types should only have id and isSolid or isInteractive or trigger condition.
+        //blocks are made out of types and save the sprite, color or gradient they use, as well as aditional info like description or the type of interaction
         this.blockTypes = {
             "void": {
                 solid: true,
@@ -67,6 +71,20 @@ class GameMap {
     draw(ctx, x, y) {
         //choose between raw color and sprite texture
         //get if tile uses texture by translatting current coordinates to map and check for tile id
+
+        if (
+            y > this.gameRef.player.positionY + this.gameRef.fov ||
+            y < this.gameRef.player.positionY - this.gameRef.fov ||
+            x > this.gameRef.player.positionX + this.gameRef.fov ||
+            x < this.gameRef.player.positionX - this.gameRef.fov
+        ) {
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.rect((x * this.tileW) * this.scale, (y * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
+            ctx.fill();
+            return;
+        }
+
         let currentTileStructure = this.getTileStructure(x, y);
         if (currentTileStructure.sprite !== undefined) {
             ctx.drawImage(this.gameRef.tileset,
@@ -115,7 +133,7 @@ class GameMap {
         }
         return tempMap;
     }
-    generateBoxMap() {
+    generateBoxMap() { //BoxMap is only for testing, use hand made or properly random generated maps for release.
         console.log("generate box map");
         let tempMap = [];
         let tempContent = new Map();
@@ -124,8 +142,12 @@ class GameMap {
         let hasvoid = false;
         let hasPlayerSpawn = false;
         let potions = 0;
-        let hasSword = false;
-        let hasChestplate = false;
+        let hasSword1 = false;
+        let hasSword2 = false;
+        let hasSword3 = false;
+        let hasArmor1 = false;
+        let hasArmor2 = false;
+        let hasArmor3 = false;
         let hasKey = false;
         let hasEnemy = false;
 
@@ -238,24 +260,64 @@ class GameMap {
             }
         }
 
-        while (!hasSword) {
+        while (!hasSword1) {
             let randX = Math.floor(Math.random() * this.mapW);
             let randY = Math.floor(Math.random() * this.mapH);
             //add player spawn point
             if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
                 coords = [randX, randY];
                 tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.sword.id);
-                hasSword = true;
+                hasSword1 = true;
             }
         }
-        while (!hasChestplate) {
+        while (!hasSword2) {
+            let randX = Math.floor(Math.random() * this.mapW);
+            let randY = Math.floor(Math.random() * this.mapH);
+            //add player spawn point
+            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
+                coords = [randX, randY];
+                tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.axe.id);
+                hasSword2 = true;
+            }
+        }
+        while (!hasSword3) {
+            let randX = Math.floor(Math.random() * this.mapW);
+            let randY = Math.floor(Math.random() * this.mapH);
+            //add player spawn point
+            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
+                coords = [randX, randY];
+                tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.hero_sword.id);
+                hasSword3 = true;
+            }
+        }
+        while (!hasArmor1) {
             let randX = Math.floor(Math.random() * this.mapW);
             let randY = Math.floor(Math.random() * this.mapH);
             //add player spawn point
             if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
                 coords = [randX, randY];
                 tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.chestPlate.id);
-                hasChestplate = true;
+                hasArmor1 = true;
+            }
+        }
+        while (!hasArmor2) {
+            let randX = Math.floor(Math.random() * this.mapW);
+            let randY = Math.floor(Math.random() * this.mapH);
+            //add player spawn point
+            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
+                coords = [randX, randY];
+                tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.iron_chestplate.id);
+                hasArmor2 = true;
+            }
+        }
+        while (!hasArmor3) {
+            let randX = Math.floor(Math.random() * this.mapW);
+            let randY = Math.floor(Math.random() * this.mapH);
+            //add player spawn point
+            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
+                coords = [randX, randY];
+                tempContent.set(this.mapToTile(randX, randY), this.gameRef.entitiesList.steel_chestplate.id);
+                hasArmor3 = true;
             }
         }
 

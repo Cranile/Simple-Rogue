@@ -376,6 +376,11 @@ class Player extends Character {
             }
             this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
         }
+
+        // quick toggle fields of view
+        if (event.code === "KeyF") {
+            this.gameRef.fov = this.gameRef.fov < 1000 ? 1000 : 5;
+        }
     }
 
     interact(target) {
@@ -438,9 +443,11 @@ class Game {
         this.canvasH;
         this.ctx;
 
+        this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
         this.inventoryOpen = false;
         this.characterOpen = false;
-        //these two should be the same
+        //all of the objects lists should be generated partially dynamically, the ids and the mirror list "ByID" and the coordinates of the sprites should be created by the machine.
+        //the rest of the parameters should be manually input.
         this.entitiesList = {
             //all Mob type entities should appear in mayus
             "player": {
@@ -542,6 +549,56 @@ class Game {
                 subtype: "misc", //decorations or interactables (levers, buttons, etc)
                 description: "books neatly ordered on a bookshelf",
             },
+            "axe": {
+                id: 11,
+                sprite: { "x": 640, "y": 112, "w": "16", "h": "16" },
+                color: "gray",
+                type: "item",
+                subtype: "equipable",
+                category: "weapon",
+                stats: {
+                    level: 2,
+                    damage: 4,
+                    speed: -1,
+                }
+            },
+            "hero_sword": {
+                id: 12,
+                sprite: { "x": 528, "y": 144, "w": "16", "h": "16" },
+                color: "gray",
+                type: "item",
+                subtype: "equipable",
+                category: "weapon",
+                stats: {
+                    level: 3,
+                    damage: 6,
+                    speed: -1,
+                }
+            },
+            "iron_chestplate": {
+                id: 13,
+                sprite: { "x": 528, "y": 16, "w": "16", "h": "16" },
+                color: "orange",
+                type: "item",
+                subtype: "equipable",
+                category: "armor",
+                stats: {
+                    level: 2,
+                    health: 7,
+                }
+            },
+            "steel_chestplate": {
+                id: 14,
+                sprite: { "x": 544, "y": 16, "w": "16", "h": "16" },
+                color: "orange",
+                type: "item",
+                subtype: "equipable",
+                category: "armor",
+                stats: {
+                    level: 3,
+                    health: 9,
+                }
+            },
         };
         this.entitiesListById = {
             //all Mob type entities should appear in mayus
@@ -556,6 +613,10 @@ class Game {
             8: this.entitiesList.key,
             9: this.entitiesList.door,
             10: this.entitiesList.stair,
+            11: this.entitiesList.axe,
+            12: this.entitiesList.hero_sword,
+            13: this.entitiesList.iron_chestplate,
+            14: this.entitiesList.steel_chestplate,
         };
         this.characterTypes = {
             "warrior": {
@@ -618,6 +679,7 @@ class Game {
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
         this.addNewEntity(this.player);
+        this.fov = 5;
 
         this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
         this.draw();
@@ -636,9 +698,17 @@ class Game {
             for (let x = 0; x < this.mapW; x++) {
 
                 this.gameMap.draw(this.ctx, x, y);
-                this.entitiesIndex.forEach(entity => {
-                    entity.draw(this.ctx, x, y);
-                });
+                if (
+                    y <= this.player.positionY + this.fov &&
+                    y >= this.player.positionY - this.fov &&
+                    x <= this.player.positionX + this.fov &&
+                    x >= this.player.positionX - this.fov
+                ) {
+                    this.entitiesIndex.forEach(entity => {
+                        entity.draw(this.ctx, x, y);
+                    });
+                }
+
             }
         }
         // INVENTORY UI
