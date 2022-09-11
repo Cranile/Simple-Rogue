@@ -542,6 +542,56 @@ class Game {
                 subtype: "misc", //decorations or interactables (levers, buttons, etc)
                 description: "books neatly ordered on a bookshelf",
             },
+            "axe": {
+                id: 11,
+                sprite: { "x": 640, "y": 112, "w": "16", "h": "16" },
+                color: "gray",
+                type: "item",
+                subtype: "equipable",
+                category: "weapon",
+                stats: {
+                    level: 2,
+                    damage: 4,
+                    speed: -1,
+                }
+            },
+            "hero_sword": {
+                id: 12,
+                sprite: { "x": 528, "y": 144, "w": "16", "h": "16" },
+                color: "gray",
+                type: "item",
+                subtype: "equipable",
+                category: "weapon",
+                stats: {
+                    level: 3,
+                    damage: 6,
+                    speed: -1,
+                }
+            },
+            "iron_chestplate": {
+                id: 13,
+                sprite: { "x": 528, "y": 16, "w": "16", "h": "16" },
+                color: "orange",
+                type: "item",
+                subtype: "equipable",
+                category: "armor",
+                stats: {
+                    level: 2,
+                    health: 7,
+                }
+            },
+            "steel_chestplate": {
+                id: 14,
+                sprite: { "x": 544, "y": 16, "w": "16", "h": "16" },
+                color: "orange",
+                type: "item",
+                subtype: "equipable",
+                category: "armor",
+                stats: {
+                    level: 3,
+                    health: 9,
+                }
+            },
         };
         this.entitiesListById = {
             //all Mob type entities should appear in mayus
@@ -556,6 +606,10 @@ class Game {
             8: this.entitiesList.key,
             9: this.entitiesList.door,
             10: this.entitiesList.stair,
+            11: this.entitiesList.axe,
+            12: this.entitiesList.hero_sword,
+            13: this.entitiesList.iron_chestplate,
+            14: this.entitiesList.steel_chestplate,
         };
         this.characterTypes = {
             "warrior": {
