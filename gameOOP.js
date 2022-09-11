@@ -438,9 +438,11 @@ class Game {
         this.canvasH;
         this.ctx;
 
+        this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
         this.inventoryOpen = false;
         this.characterOpen = false;
-        //these two should be the same
+        //all of the objects lists should be generated partially dynamically, the ids and the mirror list "ByID" and the coordinates of the sprites should be created by the machine.
+        //the rest of the parameters should be manually input.
         this.entitiesList = {
             //all Mob type entities should appear in mayus
             "player": {

@@ -21,6 +21,9 @@ class GameMap {
         this.canvasH;
 
         this.playerSpawnPoint;
+        //blocktypes should only save the basic data of the TYPES of blocks, no the blocks themselves, eg: wall is a type, stone wall is a block OF TYPE wall
+        //types should only have id and isSolid or isInteractive or trigger condition.
+        //blocks are made out of types and save the sprite, color or gradient they use, as well as aditional info like description or the type of interaction
         this.blockTypes = {
             "void": {
                 solid: true,
