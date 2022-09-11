@@ -376,6 +376,11 @@ class Player extends Character {
             }
             this.gameRef.inventoryOpen = !this.gameRef.inventoryOpen;
         }
+
+        // quick toggle fields of view
+        if (event.code === "KeyF") {
+            this.gameRef.fov = this.gameRef.fov < 1000 ? 1000 : 5;
+        }
     }
 
     interact(target) {
