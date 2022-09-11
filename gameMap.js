@@ -16,6 +16,7 @@ class GameMap{
         //saves the content of the map, key is tile coordinate , value 
         this.gameMapContent = new Map();
 
+        
         this.canvasW;
         this.canvasH;
 
@@ -67,6 +68,20 @@ class GameMap{
     draw(ctx,x,y){
         //choose between raw color and sprite texture
         //get if tile uses texture by translatting current coordinates to map and check for tile id
+
+        if(
+            y > this.gameRef.player.positionY + this.gameRef.fov || 
+            y < this.gameRef.player.positionY - this.gameRef.fov || 
+            x > this.gameRef.player.positionX + this.gameRef.fov || 
+            x < this.gameRef.player.positionX - this.gameRef.fov
+            ){
+                ctx.fillStyle = "black";
+                ctx.beginPath();
+                ctx.rect((x*this.tileW) * this.scale,(y*this.tileH)* this.scale,this.tileW* this.scale, this.tileH* this.scale);
+                ctx.fill();
+                return;
+        }
+
         let currentTileStructure = this.getTileStructure(x,y);
         if( currentTileStructure.sprite !== undefined){
             ctx.drawImage(this.gameRef.tileset, 

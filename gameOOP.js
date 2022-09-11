@@ -618,6 +618,7 @@ class Game {
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
         this.addNewEntity(this.player);
+        this.fov = 5;
 
         this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
         this.draw();
@@ -636,9 +637,17 @@ class Game {
             for (let x = 0; x < this.mapW; x++) {
 
                 this.gameMap.draw(this.ctx, x, y);
-                this.entitiesIndex.forEach(entity => {
-                    entity.draw(this.ctx, x, y);
-                });
+                if(
+                    y <= this.player.positionY + this.fov && 
+                    y >= this.player.positionY - this.fov && 
+                    x <= this.player.positionX + this.fov && 
+                    x >= this.player.positionX - this.fov
+                    ){
+                        this.entitiesIndex.forEach(entity => {
+                            entity.draw(this.ctx, x, y);
+                    });
+                }
+
             }
         }
         // INVENTORY UI
