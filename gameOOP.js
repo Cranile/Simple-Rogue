@@ -540,14 +540,14 @@ class Game {
                 subtype: "transition",//for level transition, portals, trapdoors, stairs, holes, etc
             },
             "chest": {
-                id: 10,
+                id: 11,
                 sprite: { "x": 160, "y": 144, "w": "16", "h": "16" },
                 solid: true,
                 type: "struct",
                 subtype: "container",
             },
             "bookshelf": {
-                id: 10,
+                id: 12,
                 sprite: { "x": 160, "y": 144, "w": "16", "h": "16" },
                 solid: true,
                 type: "struct",
@@ -555,7 +555,7 @@ class Game {
                 description: "books neatly ordered on a bookshelf",
             },
             "axe": {
-                id: 11,
+                id: 13,
                 sprite: { "x": 640, "y": 112, "w": "16", "h": "16" },
                 color: "gray",
                 type: "item",
@@ -567,8 +567,8 @@ class Game {
                     speed: -1,
                 }
             },
-            "hero_sword": {
-                id: 12,
+            "heroSword": {
+                id: 14,
                 sprite: { "x": 528, "y": 144, "w": "16", "h": "16" },
                 color: "gray",
                 type: "item",
@@ -580,8 +580,8 @@ class Game {
                     speed: -1,
                 }
             },
-            "iron_chestplate": {
-                id: 13,
+            "ironChestplate": {
+                id: 15,
                 sprite: { "x": 528, "y": 16, "w": "16", "h": "16" },
                 color: "orange",
                 type: "item",
@@ -592,8 +592,8 @@ class Game {
                     health: 7,
                 }
             },
-            "steel_chestplate": {
-                id: 14,
+            "steelChestplate": {
+                id: 16,
                 sprite: { "x": 544, "y": 16, "w": "16", "h": "16" },
                 color: "orange",
                 type: "item",
