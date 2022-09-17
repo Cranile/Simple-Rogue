@@ -134,8 +134,6 @@ class Character extends Entity {
 
         this.keysIndex = []; // store the key indentifier
 
-        this.lastAttackedBy; //store who attacked this entity last
-        this.retaliate = 0; //should this entity counter attack
     }
     init() {
 
@@ -289,9 +287,10 @@ class Character extends Entity {
 
         if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
+            return;
         }
 
-        //counter if other attacked
+        //counterattack if other attacked
         if(attackerID !== this.entityGlobalID){
             console.log("attacker",this.gameRef.entitiesIndex.get(attackerID),attackerID);
             this.attackOnOther(this.gameRef.entitiesIndex.get(attackerID),attackerID);
