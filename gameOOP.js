@@ -70,7 +70,7 @@ class Entity {
 
     }
 
-    attackOnSelf(damageInput) {
+    recieveDamage(damageInput) {
         if (damageInput > 0) {
             this.currentHp -= damageInput;
             console.log(this.name, "recieved:", damageInput, " damage");
@@ -79,13 +79,14 @@ class Entity {
         if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
         }
+
     }
+    
     attackOnOther(damageOutput, target) {
         if (damageOutput === undefined || target === undefined) {
             console.error("Parameters cant be undefined", damageOutput, target);
             return;
         }
-        target.attackOnSelf(damageOutput);
     }
 
     get position() {
@@ -133,6 +134,8 @@ class Character extends Entity {
 
         this.keysIndex = []; // store the key indentifier
 
+        this.lastAttackedBy; //store who attacked this entity last
+        this.retaliate = 0; //should this entity counter attack
     }
     init() {
 
@@ -276,7 +279,38 @@ class Character extends Entity {
         }
         return false;
     }
+
+
+    recieveDamage(damageInput,attackerID) {
+        if (damageInput > 0) {
+            this.currentHp -= damageInput;
+            console.log(this.name, "recieved:", damageInput, " damage");
+        }
+
+        if (this.currentHp <= 0) {
+            console.log(this.name, " is dead.");
+        }
+
+        //counter if other attacked
+        if(attackerID !== this.entityGlobalID){
+            console.log("attacker",this.gameRef.entitiesIndex.get(attackerID),attackerID);
+            this.attackOnOther(this.gameRef.entitiesIndex.get(attackerID),attackerID);
+        }
+    }
+
+    attackOnOther(target, attacker=false) {
+        if (target === undefined) {
+            console.error("Parameters cant be undefined", target);
+            return;
+        }
+        if(attacker !== false){
+            target.recieveDamage(this.actualDmg,attacker);
+            return
+        }
+        target.recieveDamage(this.actualDmg,this.entityGlobalID);
+    }
 }
+
 class Structure extends Entity {
     constructor(name = "Character", x, y, entityType, charType, game, globalID) {
         super(name, x, y, entityType, charType, game, globalID);
@@ -398,7 +432,7 @@ class Player extends Character {
                 console.log("enemy is already dead, loot?");
                 return;
             }
-            this.attackOnOther(this.actualDmg, target);
+            this.attackOnOther(target);
             return;
         }
 
@@ -616,7 +650,7 @@ class Game {
             "rogue": {
                 "hp": 8,
                 "mp": 5,
-                "dmg": 10,
+                "dmg": 8,
                 "spd": 10,
             },
             "mage": {
