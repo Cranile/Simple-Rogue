@@ -813,6 +813,20 @@ class Game {
         let text = hp[0] + " / " + hp[1];
         this.ctx.fillText(text, originX + 2, originY + 19);
 
+        //potions list
+        let xfromHealth = 20, yfromHealth = 20;
+        let listwidth = 100, listheight = 40;
+        this.ctx.beginPath();
+        this.ctx.fillStyle = "gray";
+        this.ctx.rect(originX , originY + yfromHealth + (listheight / 2), listwidth, listheight);
+        this.ctx.fill();
+
+        //health numbers
+        this.ctx.beginPath();
+        this.ctx.font = "16px Arial";
+        this.ctx.fillStyle = "black";
+        let potionlisttext = "Potions: " + 0;
+        this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
         requestAnimationFrame(() => this.draw());
     }
 
