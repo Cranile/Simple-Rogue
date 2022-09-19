@@ -2,9 +2,10 @@ class Entity {
     constructor(name = "entity", x = 0, y = 0, entityType, charType, game, globalID) {
         this.name = name;
 
-        this.baseHp = charType.hp;
-        this.maxHp = charType.hp;
-        this.currentHp = this.maxHp;
+        this.baseHp = charType.hp; // the "natural" ammount an entity has, this doesnt count equipment or buffs
+        this.baseMaxHp = charType.hp; // the "natural" maximum ammount of hp an entity can have, this doesnt count equipement or buffs
+        this.currentHp = this.baseMaxHp; // the ammount of health points the entity has at the moment
+        this.currentMaxHP = this.baseMaxHp; // the current maximum ammount of hp an entity has, this includes equipements and buffs
 
         this.maxMp = charType.mp;
 
@@ -58,13 +59,13 @@ class Entity {
     }
 
     changeHealth(hp) {
-        this.actualhp += hp;
-
-        if (this.actualhp > this.maxHp) {
-            this.actualhp = this.maxHp;
+        this.currentHp = this.currentHp + hp;
+        
+        if (this.currentHp > this.currentMaxHP) {
+            this.currentHp = this.currentMaxHP;
         }
 
-        if (this.actualhp <= 0) {
+        if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
         }
 
@@ -96,7 +97,7 @@ class Entity {
         return [this.currentHp];
     }
     get health() {
-        return [this.currentHp, this.maxHp]
+        return [this.currentHp, this.currentMaxHP]
     }
     get readDescription() {
         if (this.description !== undefined) {
@@ -111,7 +112,7 @@ class Entity {
         this.name = newName;
     }
     set maxHealth(hp) {
-        this.maxHp = hp;
+        this.baseMaxHp = hp;
     }
     set description(text) {
         this.description = text;
@@ -158,28 +159,27 @@ class Character extends Entity {
         let emptySlot = undefined;
         newitem.id = item;
         newitem.ammount = ammount;
-        if (this.inventory.length === 0) {
-
+        if (this.inventory.length === 0 || this.inventory.length === 1 && this.inventory[0] === undefined) {
             this.inventory[0] = newitem;
         } else {
 
             for (let i = 0; i < this.inventory.length; i++) {
+                console.log(i);
                 if (this.inventory[i] === undefined) {
-
+                    console.log("found undefined",i);
                     emptySlot = i;
-                }
-                if (this.inventory[i].id === newitem.id) {
-
+                    break;
+                }else if (this.inventory[i].id === newitem.id) {
                     this.inventory[i].ammount += newitem.ammount;
-
+                    return;
                 }
             }
             if (emptySlot === undefined) {
                 //if no free slots have been found, open a new one
-
+                console.log("open new slot");
                 this.inventory[this.inventory.length] = newitem;
             } else {
-
+                console.log("use old");
                 this.inventory[emptySlot] = newitem;
             }
         }
@@ -196,8 +196,8 @@ class Character extends Entity {
                 return;
             }
             this.chestArmorLvl = item.stats.level;
-            this.maxHp = this.baseHp + item.stats.health;
-            this.currentHp = this.maxHp;
+            this.currentMaxHP = this.baseHp + item.stats.health;
+            this.currentHp = this.currentMaxHP;
         }
         if (item.category === "weapon") {
             if (item.stats.level < this.weaponLvl) {
@@ -207,6 +207,24 @@ class Character extends Entity {
             this.weaponLvl = item.stats.level;
             this.actualDmg = this.baseDmg + item.stats.damage;
             this.actualSpd = this.baseSpd + item.stats.speed;
+        }
+    }
+    removeItemFromInventory(item){
+        for(let i = 0; i < this.inventory.length; i++){
+            if(this.inventory[ i ].id === item.id){
+                if(this.inventory[ i ].ammount > 1){
+                    this.inventory[ i ].ammount -= 1; //reduce current ammount of that item
+                }else{
+                    this.inventory [ i ] = undefined; //delete from inventory
+                }
+            }
+        }
+    }
+    hasItemOnInv(item){
+        for(let i = 0; i < this.inventory.length; i++){
+            if(this.inventory[ i ].id === item.id){
+                return true;
+            }
         }
     }
     move(positionX = 0, positionY = 0) {
@@ -268,7 +286,21 @@ class Character extends Entity {
         }
         console.log("no item to pickup");
     }
-
+    consumePotion(){
+        let potion = this.gameRef.entitiesList.potion
+        if(this.currentHp === this.currentMaxHP){
+            console.log("health is full");
+            return;
+        }
+        if(this.hasItemOnInv(potion)){
+            console.log("take potion");
+            this.changeHealth(potion.heal);
+            this.removeItemFromInventory(potion);
+            return;
+        }
+        console.log("no potion avaliabe");
+        return;
+    }
     hasKey(keycode) {
         for (let i = 0; i < this.keysIndex.length; i++) {
             if (this.keysIndex[i] === keycode) {
@@ -401,6 +433,9 @@ class Player extends Character {
                 break;
             case "KeyA":
                 this.move(-1);
+                break;
+            case "KeyQ":
+                this.consumePotion();
                 break;
             case "KeyE":
                 this.pickupItem();
@@ -987,7 +1022,7 @@ class CharacterModal extends Modal {
         let texts = [
             "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg,
             "weapon level: " + this.player.weaponLvl,
-            "base health: " + this.player.baseHp + " + " + (this.player.maxHp - this.player.baseHp) + " = " + this.player.maxHp,
+            "base health: " + this.player.baseHp + " + " + (this.player.currentMaxHP - this.player.baseHp) + " = " + this.player.currentMaxHP,
             "armor level: " + this.player.chestArmorLvl,
             "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd
         ]
