@@ -133,6 +133,8 @@ class Character extends Entity {
         this.chestArmorLvl = 0;
         this.weaponLvl = 0;
 
+        this.potionAmmount = 0;
+
         this.keysIndex = []; // store the key indentifier
 
     }
@@ -161,6 +163,9 @@ class Character extends Entity {
         newitem.ammount = ammount;
         if (this.inventory.length === 0 || this.inventory.length === 1 && this.inventory[0] === undefined) {
             this.inventory[0] = newitem;
+            if(newitem.id === this.gameRef.entitiesList.potion.id){
+                this.potionAmmount += newitem.ammount;
+            }
         } else {
 
             for (let i = 0; i < this.inventory.length; i++) {
@@ -170,6 +175,9 @@ class Character extends Entity {
                     emptySlot = i;
                     break;
                 }else if (this.inventory[i].id === newitem.id) {
+                    if(newitem.id === this.gameRef.entitiesList.potion.id){
+                        this.potionAmmount += newitem.ammount;
+                    }
                     this.inventory[i].ammount += newitem.ammount;
                     return;
                 }
@@ -178,9 +186,15 @@ class Character extends Entity {
                 //if no free slots have been found, open a new one
                 console.log("open new slot");
                 this.inventory[this.inventory.length] = newitem;
+                if(newitem.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount += newitem.ammount;
+                }
             } else {
                 console.log("use old");
                 this.inventory[emptySlot] = newitem;
+                if(newitem.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount += newitem.ammount;
+                }
             }
         }
         let tempItem = this.gameRef.entitiesListById[item];
@@ -216,6 +230,9 @@ class Character extends Entity {
                     this.inventory[ i ].ammount -= 1; //reduce current ammount of that item
                 }else{
                     this.inventory [ i ] = undefined; //delete from inventory
+                }
+                if(item.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount -= 1;
                 }
             }
         }
@@ -400,7 +417,6 @@ class Structure extends Entity {
 class Player extends Character {
     constructor(name, x, y, entityType, charType, game, globalID) {
         super(name, x, y, entityType, charType, game, globalID);
-
     }
 
     init() {
@@ -825,7 +841,7 @@ class Game {
         this.ctx.beginPath();
         this.ctx.font = "16px Arial";
         this.ctx.fillStyle = "black";
-        let potionlisttext = "Potions: " + 0;
+        let potionlisttext = "Potions: " + this.player.potionAmmount;
         this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
         requestAnimationFrame(() => this.draw());
     }
