@@ -2,7 +2,6 @@ class Entity {
     constructor(name = "entity", x = 0, y = 0, entityType, charType, game, globalID) {
         this.name = name;
 
-        this.baseHp = charType.hp; // the "natural" ammount an entity has, this doesnt count equipment or buffs
         this.baseMaxHp = charType.hp; // the "natural" maximum ammount of hp an entity can have, this doesnt count equipement or buffs
         this.currentHp = this.baseMaxHp; // the ammount of health points the entity has at the moment
         this.currentMaxHP = this.baseMaxHp; // the current maximum ammount of hp an entity has, this includes equipements and buffs
@@ -66,7 +65,7 @@ class Entity {
         }
 
         if (this.currentHp <= 0) {
-            console.log(this.name, " is dead.");
+            this.onDeath();
         }
 
     }
@@ -90,6 +89,9 @@ class Entity {
         }
     }
 
+    onDeath(){
+        console.log(this.name, " is dead.");
+    }
     get position() {
         return [this.positionX, this.positionY];
     }
@@ -134,6 +136,16 @@ class Character extends Entity {
         this.weaponLvl = 0;
 
         this.potionAmmount = 0;
+
+        this.xpUntilNextLvl = 5;
+        this.currentXP = 0;
+        this.xpScaling = 2; //every time a level up happens, the xp until next level gets multiplied by this scaling.
+        this.currentLvl = 1;
+        this.maxLevel = 10;
+
+        this.xpValue = 2 * this.currentLvl; // the ammount of xp this entity gives when killed
+
+        this.lastHitBy; //keeps track on which entity hit this entity.
 
         this.keysIndex = []; // store the key indentifier
 
@@ -210,7 +222,7 @@ class Character extends Entity {
                 return;
             }
             this.chestArmorLvl = item.stats.level;
-            this.currentMaxHP = this.baseHp + item.stats.health;
+            this.currentMaxHP = this.baseMaxHp + item.stats.health;
             this.currentHp = this.currentMaxHP;
         }
         if (item.category === "weapon") {
@@ -327,8 +339,45 @@ class Character extends Entity {
         return false;
     }
 
+    onDeath(){
+        console.log(this.name,"was killed by",this.gameRef.entitiesIndex.get(this.lastHitBy).name );
+        this.gameRef.entitiesIndex.get(this.lastHitBy).recieveXP(this.xpValue);
+    }
+    recieveXP(xpAmmount){
+        if(this.currentLvl >= this.maxLevel){
+            return;
+        }
+        //this method will fail if entity recieves enough xp to level up multiple times
+        //a better way would need to pre define the "ranks" of xp until next level, and check how many the entity has surpased
+        this.currentXP += xpAmmount;
+        console.log(this.name," got ",xpAmmount," XP");
+        if(this.currentXP >= this.xpUntilNextLvl){
+            this.levelUp();
+        }
+    }
+    levelUp(){
+        let healthBonus = this.currentMaxHP - this.baseMaxHp;
+        console.log(healthBonus);
+        let dmgBonus = this.actualDmg - this.baseDmg;
+        console.log(dmgBonus);
 
+        this.currentLvl += 1;
+        this.xpUntilNextLvl = this.xpUntilNextLvl * this.xpScaling;
+        this.xpValue = 3 * this.currentLvl;
+
+        console.log(this.name," has leveled up, now is level:",this.currentLvl);
+
+        this.baseDmg += this.currentLvl;
+        this.baseMaxHp += this.currentLvl;
+        
+        // update current stats
+        this.currentMaxHP = this.baseMaxHp + healthBonus;
+        this.currentHp = this.currentMaxHP;
+        this.actualDmg = this.baseDmg + dmgBonus;
+    }
+    
     recieveDamage(damageInput,attackerID) {
+        this.lastHitBy = attackerID;
         if (damageInput > 0) {
             this.currentHp -= damageInput;
             console.log(this.name, "recieved:", damageInput, " damage");
@@ -336,9 +385,9 @@ class Character extends Entity {
 
         if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
+            this.onDeath();
             return;
         }
-
         //counterattack if other attacked
         if(attackerID !== this.entityGlobalID){
             console.log("attacker",this.gameRef.entitiesIndex.get(attackerID),attackerID);
@@ -1052,9 +1101,11 @@ class CharacterModal extends Modal {
         let texts = [
             "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg,
             "weapon level: " + this.player.weaponLvl,
-            "base health: " + this.player.baseHp + " + " + (this.player.currentMaxHP - this.player.baseHp) + " = " + this.player.currentMaxHP,
+            "base health: " + this.player.baseMaxHp + " + " + (this.player.currentMaxHP - this.player.baseMaxHp) + " = " + this.player.currentMaxHP,
             "armor level: " + this.player.chestArmorLvl,
-            "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd
+            "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd,
+            "Level: " + this.player.currentLvl,
+            "XP: " + this.player.currentXP + " / " + this.player.xpUntilNextLvl,
         ]
 
         for (const [i, text] of texts.entries()) {
