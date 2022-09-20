@@ -1,2 +1,2 @@
 Live version :
-https://nicolascrapanzano.github.io/RogueOOP/
+https://nicolascrapanzano.github.io/Simple-Rogue/
