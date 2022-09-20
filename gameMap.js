@@ -139,13 +139,13 @@ class GameMap {
         let tempContent = new Map();
         let randomGrounds = [];
 
-        let hasdoor = false;
+        let hasdoor = 0;
         let hasvoid = false;
         let hasPlayerSpawn = false;
         let potions = 0;
         let items = []
         let hasKey = false;
-        let hasEnemy = false;
+        let hasEnemy = 0;
 
         let randX, randY;
 
@@ -196,6 +196,7 @@ class GameMap {
             item.show = true;
         }
 
+        /* Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
         while (hasdoor < 3) {
             randX = Math.floor(Math.random() * this.mapW);
             randY = Math.floor(Math.random() * this.mapH);
@@ -224,16 +225,17 @@ class GameMap {
                 hasKey = false;
             }
         }
+        */
 
-        while (!hasEnemy) {
+        while (hasEnemy < 5) {
             randX = Math.floor(Math.random() * this.mapW);
             randY = Math.floor(Math.random() * this.mapH);
             //add door
             if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
-                let newenemy = new Character("test enemy", randX, randY, this.gameRef.entitiesList.goblin, this.gameRef.characterTypes.rogue, this.gameRef, this.gameRef.entityCount);
+                let newenemy = new Character("enemy " + hasEnemy, randX, randY, this.gameRef.entitiesList.goblin, this.gameRef.characterTypes.rogue, this.gameRef, this.gameRef.entityCount);
                 newenemy.setStanceToPlayer("enemy");
                 this.gameRef.addNewEntity(newenemy);
-                hasEnemy = true;
+                hasEnemy++;
             }
         }
 
