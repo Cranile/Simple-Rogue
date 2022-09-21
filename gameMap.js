@@ -1,6 +1,6 @@
 
 class GameMap {
-    constructor(tileW, tileH, scale, mapW, mapH, game) {
+    constructor(tileW, tileH, scale, mapW, mapH, cameraW, cameraH, game) {
 
         this.tileW = tileW;
         this.tileH = tileH;
@@ -9,6 +9,9 @@ class GameMap {
 
         this.mapW = mapW;
         this.mapH = mapH;
+
+        this.cameraW = cameraW;
+        this.cameraH = cameraH;
 
         this.gameRef = game;
         //saves the layout of the map NOT THE CONTENT!
@@ -61,6 +64,7 @@ class GameMap {
             let tempMap = this.generateBoxMap();
             this.gameMapStructure = tempMap[0];
             this.gameMapContent = tempMap[1];
+            console.log("map w", this.mapW);
             resolve(true);
         })
     }
@@ -68,15 +72,17 @@ class GameMap {
     update() {
 
     }
-    draw(ctx, x, y) {
+    draw(ctx, x, y, tileX, tileY) {
         //choose between raw color and sprite texture
         //get if tile uses texture by translatting current coordinates to map and check for tile id
 
+        let currentTileStructure = this.getTileStructure(x,y);
         if (
+            currentTileStructure === undefined ||
             y > this.gameRef.player.positionY + this.gameRef.fov ||
             y < this.gameRef.player.positionY - this.gameRef.fov ||
             x > this.gameRef.player.positionX + this.gameRef.fov ||
-            x < this.gameRef.player.positionX - this.gameRef.fov
+            x < this.gameRef.player.positionX - this.gameRef.fov 
         ) {
             ctx.fillStyle = "black";
             ctx.beginPath();
@@ -85,7 +91,6 @@ class GameMap {
             return;
         }
 
-        let currentTileStructure = this.getTileStructure(x, y);
         if (currentTileStructure.sprite !== undefined) {
             ctx.drawImage(this.gameRef.tileset,
                 currentTileStructure.sprite.x, currentTileStructure.sprite.y,
@@ -115,6 +120,7 @@ class GameMap {
                 this.tileW * this.scale, this.tileH * this.scale
             );
         }
+        
     }
 
     createMap() {
@@ -153,9 +159,7 @@ class GameMap {
         for (let y = 0; y < this.mapH; y++) {
             for (let x = 0; x < this.mapW; x++) {
 
-                if (x === 0 && y === 0 || y === 0 && x === this.mapW - 1 || x === 0 && y === this.mapH - 1 || x === this.mapW - 1 && y === this.mapH - 1) {
-                    tempMap[this.mapToTile(x, y)] = this.blockTypes.wall.id; //add wall
-                } else if (x === 0 || x === this.mapW - 1) {
+                if (x === 0 || x === this.mapW - 1) {
                     tempMap[this.mapToTile(x, y)] = this.blockTypes.wall.id; //add wall
                 } else if (y === 0) {
                     tempMap[this.mapToTile(x, y)] = this.blockTypes.wall.id; //add wall
@@ -269,8 +273,8 @@ class GameMap {
         return (this.mapW * y) + x;
     }
     setCanvasSize() {
-        this.canvasW = (this.mapW * this.tileW) * this.scale;
-        this.canvasH = (this.mapH * this.tileH) * this.scale;
+        this.canvasW = (this.cameraW * this.tileW) * this.scale;
+        this.canvasH = (this.cameraH * this.tileH) * this.scale;
     }
 
     getTileStructIDfromCoords(x, y) { //returns the ID of the block stored on that coordinate

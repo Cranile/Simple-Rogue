@@ -581,6 +581,8 @@ class Game {
         this.ctx;
 
         this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
+        this.cameraW = 35; //this determines what area surrounding the player should be shown on the screen
+        this.cameraH = 25;
         this.menues = {
             "inventory": false,
             "character": false
@@ -770,7 +772,7 @@ class Game {
 
     async setMap() {
         return new Promise((resolve) => {
-            resolve(new GameMap(this.tileW, this.tileH, this.scale, this.mapW, this.mapH, this));
+            resolve(new GameMap(this.tileW, this.tileH, this.scale, this.mapW, this.mapH, this.cameraW, this.cameraH, this));
         });
     }
     async init() {
@@ -800,11 +802,12 @@ class Game {
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
         this.addNewEntity(this.player);
-        this.fov = 5;
+        this.fov = 1000;
 
         this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
         this.draw();
 
+        window.addEventListener("click", event => this.clickHandler(event) );
     }
 
     update() {
@@ -815,10 +818,13 @@ class Game {
         //Draw graphics on canvas
         this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
         let currentSecond = 0, frameCount = 0, framesLastSecond = 0, lastFrameTime = 0;
-        for (let y = 0; y < this.mapH; y++) {
-            for (let x = 0; x < this.mapW; x++) {
 
-                this.gameMap.draw(this.ctx, x, y);
+        let tileX = this.player.positionX - Math.floor(this.cameraW / 2);
+        let tileY = this.player.positionY - Math.floor(this.cameraH / 2);
+        for (let y = tileY; y < (this.cameraH + tileY); y++) {
+            for (let x = tileX; x < (this.cameraW + tileX); x++) {    
+                
+                this.gameMap.draw(this.ctx, x, y,);
                 if (
                     y <= this.player.positionY + this.fov &&
                     y >= this.player.positionY - this.fov &&
@@ -933,6 +939,9 @@ class Game {
             return [this.keysIndex.get(keycode), keycode];
         }
         return false;
+    }
+    clickHandler(event){
+        console.log(event.offsetX,event.offsetY);
     }
 }
 
