@@ -64,7 +64,7 @@ class GameMap {
             let tempMap = this.generateBoxMap();
             this.gameMapStructure = tempMap[0];
             this.gameMapContent = tempMap[1];
-            console.log("map w", this.mapW);
+            
             resolve(true);
         })
     }
@@ -174,7 +174,7 @@ class GameMap {
             }
         }
 
-        /*
+        
         let shuffle = (grounds) => {
             return grounds
                 .map(value => ({ value, sort: Math.random() }))
@@ -202,6 +202,7 @@ class GameMap {
             item.show = true;
         }
 
+        /*
      Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
         while (hasdoor < 3) {
             randX = Math.floor(Math.random() * this.mapW);
@@ -231,7 +232,7 @@ class GameMap {
                 hasKey = false;
             }
         }
-        
+        */
 
         while (hasEnemy < 5) {
             randX = Math.floor(Math.random() * this.mapW);
@@ -258,7 +259,7 @@ class GameMap {
 
         
         //add stair
-        */
+        
        while (!hasPlayerSpawn) {
            let randX = 10;
            let randY = 10;
