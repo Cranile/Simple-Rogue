@@ -72,12 +72,12 @@ class GameMap {
     update() {
 
     }
-    draw(ctx, x, y, screenX,screenY) {
+    draw(ctx, x, y, offsetX, offsetY) {
         //choose between raw color and sprite texture
         //get if tile uses texture by translatting current coordinates to map and check for tile id
 
         let currentTileStructure = this.getTileStructure(x,y);
-        console.log(this.mapToTile(x, y)," : ",currentTileStructure);
+        //console.log(currentTileStructure);
         if (
             currentTileStructure === undefined ||
             y > this.gameRef.player.positionY + this.gameRef.fov ||
@@ -87,7 +87,7 @@ class GameMap {
         ) {
             ctx.fillStyle = "black";
             ctx.beginPath();
-            ctx.rect((screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
+            ctx.rect((offsetX + x * this.tileW) * this.scale, (offsetY + y * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
             ctx.fill();
             return;
         }
@@ -96,7 +96,7 @@ class GameMap {
             ctx.drawImage(this.gameRef.tileset,
                 currentTileStructure.sprite.x, currentTileStructure.sprite.y,
                 currentTileStructure.sprite.w, currentTileStructure.sprite.h,
-                (screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale,
+                (offsetX + x * this.tileW) * this.scale, (offsetY + y * this.tileH) * this.scale,
                 this.tileW * this.scale, this.tileH * this.scale
             );
 
@@ -104,7 +104,7 @@ class GameMap {
             let col = currentTileStructure.color;
             ctx.fillStyle = col;
             ctx.beginPath();
-            ctx.rect((screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
+            ctx.rect((offsetX + x * this.tileW) * this.scale, (offsetY + y * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
             ctx.fill();
         }
 
@@ -117,7 +117,7 @@ class GameMap {
             ctx.drawImage(this.gameRef.tileset,
                 currentTileContent.sprite.x, currentTileContent.sprite.y,
                 currentTileContent.sprite.w, currentTileContent.sprite.h,
-                (x * this.tileW) * this.scale, (y * this.tileH) * this.scale,
+                (offsetX + x * this.tileW) * this.scale, (offsetY + y * this.tileH) * this.scale,
                 this.tileW * this.scale, this.tileH * this.scale
             );
         }
@@ -260,8 +260,8 @@ class GameMap {
         //add stair
         */
        while (!hasPlayerSpawn) {
-           let randX = 5;
-           let randY = 5;
+           let randX = 10;
+           let randY = 10;
            //add player spawn point
            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
                coords = [randX, randY];

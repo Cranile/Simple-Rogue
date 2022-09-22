@@ -29,13 +29,14 @@ class Entity {
 
     }
 
-    draw(ctx, x, y) {
+    draw(ctx, x, y, offsetX, offsetY) {
         if (x === this.positionX && y === this.positionY) {
+            
             ctx.drawImage(
                 this.gameRef.tileset,
                 this.entitySpecs.sprite.x, this.entitySpecs.sprite.y,
                 this.entitySpecs.sprite.w, this.entitySpecs.sprite.h,
-                (x * this.gameRef.tileW) * this.scale, (y * this.gameRef.tileH) * this.scale,
+                (offsetX + x * this.gameRef.tileW) * this.scale, (offsetY + y * this.gameRef.tileH) * this.scale,
                 this.gameRef.tileW * this.scale, this.gameRef.tileH * this.scale
             );
             /*
@@ -267,6 +268,7 @@ class Character extends Entity {
     calculateMovingCoords(positionX = 0, positionY = 0) { //TILE based movement
         //check if it can move to desired pos
         //check if colliding with enemy, call attack
+        
         let newCoords = [this.positionX, this.positionY];
 
         //the if check is because the recieved data could be undefined, by not moving on some axis, then it stays the same
@@ -278,7 +280,7 @@ class Character extends Entity {
         }
 
         if (this.gameRef.gameMap.isTileSolid(newCoords[0], newCoords[1])) {
-
+            
             return false;
         }
         let interactableObj = this.gameRef.hasEntityOnPos(newCoords[0], newCoords[1]);
@@ -489,15 +491,19 @@ class Player extends Character {
         switch (event.code) {
             case "KeyW":
                 this.move(0, -1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyS":
                 this.move(0, 1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyD":
                 this.move(1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyA":
                 this.move(-1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyQ":
                 this.consumePotion();
@@ -543,28 +549,57 @@ class Player extends Character {
     }
 }
 class Camera {
-    constructor(x=0,y=0,wTiles,hTiles,game){
+    constructor(canvasW,canvasH,game){
         this.gameRef = game;
-        this.x = x;
-        this.y = y;
-        this.wTiles = wTiles;
-        this.hTiles = hTiles;
-        this.w;
-        this.h;
+        //size of the camera
+        this.x = canvasW;
+        this.y = canvasH;
+        //what are the first tiles to be drawn
+        this.startTileX = 0;
+        this.startTileY = 0;
+        //what are the last tiles to be drawn
+        this.endTileX = 0;
+        this.endTileY = 0;
+
+        this.offsetX;
+        this.offsetY;
+
         this.init();
     }
 
     init(){
-        this.updatePosition(this.gameRef.player.positionX,this.gameRef.player.positionY)
-        this.w = this.wTiles * this.gameRef.tileW * this.gameRef.scale;
-        this.h = this.hTiles * this.gameRef.tileH * this.gameRef.scale;
+
     }
 
-    updatePosition(x,y){
-        this.x = x - Math.floor(this.wTiles / 2);
-        this.y = y - Math.floor(this.hTiles / 2);
-        console.log(this.x,this.y);
+    update(x,y){
+        console.log("update",x,y);
+        this.offsetX = Math.floor((this.x / 2) - (x * this.gameRef.tileW));
+        this.offsetY = Math.floor((this.y / 2) - (y * this.gameRef.tileH));
+
+        let tileX = Math.floor(x );
+        let tileY = Math.floor(y );
+
+        this.startTileX = tileX - 1 - Math.ceil( (this.x / 2) );
+        this.startTileY = tileY - 1 - Math.ceil( (this.y / 2)  );
+
+        if(this.startTileX < 0){
+            this.startTileX = 0;
+        }
+        if(this.startTileY < 0){
+            this.startTileY = 0;
+        }
+        this.endTileX = tileX + 1 + Math.ceil(this.x / 2) ;
+        this.endTileY = tileY + 1 + Math.ceil(this.y / 2) ;
+
+        if(this.endTileX >= this.gameRef.mapW){
+            this.endTileX = this.gameRef.mapW ;
+        }
+        if(this.endTileY >= this.gameRef.mapH){
+            this.endTileY = this.gameRef.mapH ;
+        }
     }
+
+
 }
 class Game {
     //all interactables must be of type entity, NPCs, Items and structures like doors or stairs
@@ -605,8 +640,8 @@ class Game {
 
         this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
 
-        this.cameraW = 20;
-        this.cameraH = 20;
+        this.cameraW = 35;
+        this.cameraH = 25;
         this.menues = {
             "inventory": false,
             "character": false
@@ -825,7 +860,8 @@ class Game {
         this.gameCanvas.height = canvasSize[1];
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
-        this.camera = new Camera(0,0,this.cameraW, this.cameraH, this);
+        this.camera = new Camera(this.canvasW,this.canvasH,this);
+        this.camera.update(this.player.positionX, this.player.positionY );
         this.addNewEntity(this.player);
         this.fov = 1000;
 
@@ -841,26 +877,15 @@ class Game {
 
     draw() {
         //Draw graphics on canvas
-        this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        this.ctx.fillStyle = "black";
+        this.ctx.rect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        this.ctx.fill();
         let currentSecond = 0, frameCount = 0, framesLastSecond = 0, lastFrameTime = 0;
 
-        this.camera.updatePosition(this.player.positionX,this.player.positionY);
-        let minX = this.camera.x;
-        let minY = this.camera.y;
-        let maxX = this.camera.x + this.camera.wTiles;
-        let maxY = this.camera.y + this.camera.hTiles;
-        for (let y = minY; y < maxY; y++) {
-            for (let x = minX; x < maxX; x++) {
-                let cameraX = ( x - minX) + minX;
-                let cameraY = ( y - minY) + minY;
-                if(cameraX < 0 ){
-                    cameraX = 0;
-                }
-                if(cameraY < 0 ){
-                    cameraY = 0;
-                }
-                console.log(cameraX,cameraY);
-                this.gameMap.draw(this.ctx, x, y, cameraX, cameraY);
+        for (let y = this.camera.startTileY; y < this.camera.endTileY; y++) {
+            for (let x = this.camera.startTileY; x < this.camera.endTileX; x++) {
+
+                this.gameMap.draw(this.ctx, x, y, this.camera.offsetX, this.camera.offsetY);
                 if (
                     y <= this.player.positionY + this.fov &&
                     y >= this.player.positionY - this.fov &&
@@ -868,7 +893,7 @@ class Game {
                     x >= this.player.positionX - this.fov
                 ) {
                     this.entitiesIndex.forEach(entity => {
-                        entity.draw(this.ctx, x, y);
+                        entity.draw(this.ctx, x, y, this.camera.offsetX, this.camera.offsetY);
                     });
                 }
                 
@@ -935,7 +960,7 @@ class Game {
         let potionlisttext = "Potions: " + this.player.potionAmmount;
         this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
         
-        //requestAnimationFrame(() => this.draw());
+        requestAnimationFrame(() => this.draw());
     }
 
     fetchProject() {
