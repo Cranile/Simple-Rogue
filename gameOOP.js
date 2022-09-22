@@ -542,7 +542,30 @@ class Player extends Character {
         return;
     }
 }
+class Camera {
+    constructor(x=0,y=0,wTiles,hTiles,game){
+        this.gameRef = game;
+        this.x = x;
+        this.y = y;
+        this.wTiles = wTiles;
+        this.hTiles = hTiles;
+        this.w;
+        this.h;
+        this.init();
+    }
 
+    init(){
+        this.updatePosition(this.gameRef.player.positionX,this.gameRef.player.positionY)
+        this.w = this.wTiles * this.gameRef.tileW * this.gameRef.scale;
+        this.h = this.hTiles * this.gameRef.tileH * this.gameRef.scale;
+    }
+
+    updatePosition(x,y){
+        this.x = x - Math.floor(this.wTiles / 2);
+        this.y = y - Math.floor(this.hTiles / 2);
+        console.log(this.x,this.y);
+    }
+}
 class Game {
     //all interactables must be of type entity, NPCs, Items and structures like doors or stairs
     //these should be stored on the same database, separated from actual structures like ground or walls
@@ -576,13 +599,14 @@ class Game {
         this.canvasName = canvasName;
         this.gameCanvas;
 
-        this.canvasW;
-        this.canvasH;
+        this.canvasW ;
+        this.canvasH ;
         this.ctx;
 
         this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
-        this.cameraW = 35; //this determines what area surrounding the player should be shown on the screen
-        this.cameraH = 25;
+
+        this.cameraW = 20;
+        this.cameraH = 20;
         this.menues = {
             "inventory": false,
             "character": false
@@ -801,6 +825,7 @@ class Game {
         this.gameCanvas.height = canvasSize[1];
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
+        this.camera = new Camera(0,0,this.cameraW, this.cameraH, this);
         this.addNewEntity(this.player);
         this.fov = 1000;
 
@@ -819,12 +844,23 @@ class Game {
         this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
         let currentSecond = 0, frameCount = 0, framesLastSecond = 0, lastFrameTime = 0;
 
-        let tileX = this.player.positionX - Math.floor(this.cameraW / 2);
-        let tileY = this.player.positionY - Math.floor(this.cameraH / 2);
-        for (let y = tileY; y < (this.cameraH + tileY); y++) {
-            for (let x = tileX; x < (this.cameraW + tileX); x++) {    
-                
-                this.gameMap.draw(this.ctx, x, y,);
+        this.camera.updatePosition(this.player.positionX,this.player.positionY);
+        let minX = this.camera.x;
+        let minY = this.camera.y;
+        let maxX = this.camera.x + this.camera.wTiles;
+        let maxY = this.camera.y + this.camera.hTiles;
+        for (let y = minY; y < maxY; y++) {
+            for (let x = minX; x < maxX; x++) {
+                let cameraX = ( x - minX) + minX;
+                let cameraY = ( y - minY) + minY;
+                if(cameraX < 0 ){
+                    cameraX = 0;
+                }
+                if(cameraY < 0 ){
+                    cameraY = 0;
+                }
+                console.log(cameraX,cameraY);
+                this.gameMap.draw(this.ctx, x, y, cameraX, cameraY);
                 if (
                     y <= this.player.positionY + this.fov &&
                     y >= this.player.positionY - this.fov &&
@@ -835,7 +871,7 @@ class Game {
                         entity.draw(this.ctx, x, y);
                     });
                 }
-
+                
             }
         }
         // INVENTORY UI
@@ -898,7 +934,8 @@ class Game {
         this.ctx.fillStyle = "black";
         let potionlisttext = "Potions: " + this.player.potionAmmount;
         this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
-        requestAnimationFrame(() => this.draw());
+        
+        //requestAnimationFrame(() => this.draw());
     }
 
     fetchProject() {
