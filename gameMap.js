@@ -72,11 +72,12 @@ class GameMap {
     update() {
 
     }
-    draw(ctx, x, y, tileX, tileY) {
+    draw(ctx, x, y, screenX,screenY) {
         //choose between raw color and sprite texture
         //get if tile uses texture by translatting current coordinates to map and check for tile id
 
         let currentTileStructure = this.getTileStructure(x,y);
+        console.log(this.mapToTile(x, y)," : ",currentTileStructure);
         if (
             currentTileStructure === undefined ||
             y > this.gameRef.player.positionY + this.gameRef.fov ||
@@ -86,7 +87,7 @@ class GameMap {
         ) {
             ctx.fillStyle = "black";
             ctx.beginPath();
-            ctx.rect((x * this.tileW) * this.scale, (y * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
+            ctx.rect((screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
             ctx.fill();
             return;
         }
@@ -95,7 +96,7 @@ class GameMap {
             ctx.drawImage(this.gameRef.tileset,
                 currentTileStructure.sprite.x, currentTileStructure.sprite.y,
                 currentTileStructure.sprite.w, currentTileStructure.sprite.h,
-                (x * this.tileW) * this.scale, (y * this.tileH) * this.scale,
+                (screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale,
                 this.tileW * this.scale, this.tileH * this.scale
             );
 
@@ -103,7 +104,7 @@ class GameMap {
             let col = currentTileStructure.color;
             ctx.fillStyle = col;
             ctx.beginPath();
-            ctx.rect((x * this.tileW) * this.scale, (y * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
+            ctx.rect((screenX * this.tileW) * this.scale, (screenY * this.tileH) * this.scale, this.tileW * this.scale, this.tileH * this.scale);
             ctx.fill();
         }
 
@@ -173,6 +174,7 @@ class GameMap {
             }
         }
 
+        /*
         let shuffle = (grounds) => {
             return grounds
                 .map(value => ({ value, sort: Math.random() }))
@@ -200,7 +202,7 @@ class GameMap {
             item.show = true;
         }
 
-        /* Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
+     Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
         while (hasdoor < 3) {
             randX = Math.floor(Math.random() * this.mapW);
             randY = Math.floor(Math.random() * this.mapH);
@@ -229,7 +231,7 @@ class GameMap {
                 hasKey = false;
             }
         }
-        */
+        
 
         while (hasEnemy < 5) {
             randX = Math.floor(Math.random() * this.mapW);
@@ -254,19 +256,19 @@ class GameMap {
             }
         }
 
-        while (!hasPlayerSpawn) {
-            let randX = Math.floor(Math.random() * this.mapW);
-            let randY = Math.floor(Math.random() * this.mapH);
-            //add player spawn point
-            if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
-                coords = [randX, randY];
-                this.playerSpawnPoint = coords;
-                hasPlayerSpawn = true;
-            }
-        }
-
+        
         //add stair
-
+        */
+       while (!hasPlayerSpawn) {
+           let randX = 5;
+           let randY = 5;
+           //add player spawn point
+           if (tempMap[this.mapToTile(randX, randY)] === this.blockTypes.ground.id) {
+               coords = [randX, randY];
+               this.playerSpawnPoint = coords;
+               hasPlayerSpawn = true;
+           }
+       }
         return [tempMap, tempContent];
     }
     mapToTile(x, y) {
