@@ -572,12 +572,12 @@ class Camera {
     }
 
     update(x,y){
-        console.log("update",x,y);
-        this.offsetX = Math.floor((this.x / 2) - (x * this.gameRef.tileW));
-        this.offsetY = Math.floor((this.y / 2) - (y * this.gameRef.tileH));
+        this.offsetX = Math.floor((this.x / 2) - (x * this.gameRef.tileW) + (this.gameRef.tileW / 2));
+        
+        this.offsetY = Math.floor((this.y / 2) - (y * this.gameRef.tileH) + (this.gameRef.tileH / 2));
 
-        let tileX = Math.floor(x );
-        let tileY = Math.floor(y );
+        let tileX = Math.floor(x / this.gameRef.tileW);
+        let tileY = Math.floor(y / this.gameRef.tileH);
 
         this.startTileX = tileX - 1 - Math.ceil( (this.x / 2) );
         this.startTileY = tileY - 1 - Math.ceil( (this.y / 2)  );
