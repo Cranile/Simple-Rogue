@@ -23,7 +23,7 @@ class GameMap {
         this.canvasW;
         this.canvasH;
 
-        this.playerSpawnPoint;
+        this.playerSpawnPoint = undefined;
         //blocktypes should only save the basic data of the TYPES of blocks, no the blocks themselves, eg: wall is a type, stone wall is a block OF TYPE wall
         //types should only have id and isSolid or isInteractive or trigger condition.
         //blocks are made out of types and save the sprite, color or gradient they use, as well as aditional info like description or the type of interaction
@@ -61,7 +61,7 @@ class GameMap {
         return new Promise((resolve) => {
             this.setCanvasSize();
             //create or load map
-            let tempMap = this.generateBoxMap();
+            let tempMap = this.roomPlacementGeneration();
             this.gameMapStructure = tempMap[0];
             this.gameMapContent = tempMap[1];
             
@@ -270,6 +270,70 @@ class GameMap {
                hasPlayerSpawn = true;
            }
        }
+        return [tempMap, tempContent];
+    }
+
+    roomPlacementGeneration(){
+        let tempMap = new Array(this.mapW * this.mapH);
+        let tempContent = new Map();
+
+        let roomAmmount = 0;
+        let maxRoomAmmount = 1;
+        let roomsPositions = ["s"];
+
+        let maxRoomSize = 22;
+        let minRoomSize = 8;
+
+        let minItemsPerRoom = 2;
+        let maxItemsPerRoom = 6;
+
+        let minTotalMonsters;
+        let maxTotalMonsters;
+
+        let minMonstersPerRoom;
+        let maxMonstersPerRoom;
+        while(roomAmmount < maxRoomAmmount){
+            let roomSize = Math.floor(Math.random() * (maxRoomSize - minRoomSize) + minRoomSize);
+            
+            let randX = Math.floor(Math.random() * (this.mapW - roomSize));
+            let randY = Math.floor(Math.random() * (this.mapH - roomSize));
+            
+            for(let i = 0; i < roomsPositions.length ; i++){
+
+                if(roomsPositions.length <= 1 ){
+
+                    roomsPositions[ roomAmmount ] = {
+                        startX: randX,
+                        startY: randY,
+                        endX: randX + roomSize,
+                        endY: randY + roomSize,
+                    };
+
+                    let currentTile = this.mapToTile(randX, randY);
+                    console.log(roomsPositions[ roomAmmount ]);
+                    for(let x = roomsPositions[ roomAmmount ].startX; x < roomsPositions[ roomAmmount ].endX ; x++){
+                        for(let y = roomsPositions[ roomAmmount ].startY; y < roomsPositions[ roomAmmount ].endY; y++){
+
+                            if(x === roomsPositions[ roomAmmount ].startX || x === roomsPositions[ roomAmmount ].endX -1 || y === roomsPositions[ roomAmmount ].startY || y === roomsPositions[ roomAmmount ].endY - 1 ){
+                                tempMap[ this.mapToTile(x, y) ] = this.blockTypes.wall.id;
+                            }else{
+                                tempMap[ this.mapToTile(x, y) ] = this.blockTypes.ground.id;
+
+                            }
+                            
+                        }
+                    }
+                    
+                    this.playerSpawnPoint = [
+                        Math.floor((roomsPositions[ roomAmmount ].endX -1 + roomsPositions[ roomAmmount ].startX ) / 2)
+                        ,
+                        Math.floor((roomsPositions[ roomAmmount ].endY -1 + roomsPositions[ roomAmmount ].startY) / 2)
+                    ];
+                    roomAmmount++;
+                }
+            }
+        }
+
         return [tempMap, tempContent];
     }
     mapToTile(x, y) {
