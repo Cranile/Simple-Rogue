@@ -278,11 +278,17 @@ class GameMap {
         let tempContent = new Map();
 
         let roomAmmount = 0;
-        let maxRoomAmmount = 1;
+        let maxRoomAmmount = 3;
         let roomsPositions = ["s"];
 
-        let maxRoomSize = 22;
-        let minRoomSize = 8;
+        let tries = 0; //to prevent infinite map creation, if max tries are reached, create the map with less rooms
+        let notCollisionsCount; //add 1 for each box on the array for which the new box didnt collide, if at array.length === this var, then build new room
+
+        let tunnelsDone = false;
+        let counter = 0;
+
+        let minRoomSize = 6;
+        let maxRoomSize = 12;
 
         let minItemsPerRoom = 2;
         let maxItemsPerRoom = 6;
@@ -292,29 +298,41 @@ class GameMap {
 
         let minMonstersPerRoom;
         let maxMonstersPerRoom;
-        while(roomAmmount < maxRoomAmmount){
+        while(roomAmmount < maxRoomAmmount ){
+            
             let roomSize = Math.floor(Math.random() * (maxRoomSize - minRoomSize) + minRoomSize);
             
             let randX = Math.floor(Math.random() * (this.mapW - roomSize));
             let randY = Math.floor(Math.random() * (this.mapH - roomSize));
-            
+
+            notCollisionsCount = 0 ;
+            let tempRoom = {
+                startX: randX,
+                startY: randY,
+                endX: randX + roomSize,
+                endY: randY + roomSize,
+            };
+
             for(let i = 0; i < roomsPositions.length ; i++){
-
-                if(roomsPositions.length <= 1 ){
-
-                    roomsPositions[ roomAmmount ] = {
-                        startX: randX,
-                        startY: randY,
-                        endX: randX + roomSize,
-                        endY: randY + roomSize,
-                    };
-
+                
+                if(roomsPositions.length >= maxRoomAmmount){
+                    break; //this is a failsafe, dont delete
+                }
+                if(!(roomsPositions[0] === "s") && !(this.areBoxColliding(tempRoom.startX ,tempRoom.startY, tempRoom.endX, tempRoom.endY, roomsPositions[i].startX, roomsPositions[i].startY, roomsPositions[i].endX, roomsPositions[i].endY))){
+                    //console.log("not collision", notCollisionsCount, "roomcount: ",roomAmmount);
+                    notCollisionsCount++;
+                }
+                if(roomsPositions.length <= 1 && roomsPositions[0] === "s" || notCollisionsCount >= roomsPositions.length  ){
+                    //console.log("creating new room,",roomAmmount);
+                    roomsPositions[ roomAmmount ] = tempRoom;
+                    tries = 0;
+                    console.log(roomsPositions);
                     let currentTile = this.mapToTile(randX, randY);
-                    console.log(roomsPositions[ roomAmmount ]);
-                    for(let x = roomsPositions[ roomAmmount ].startX; x < roomsPositions[ roomAmmount ].endX ; x++){
-                        for(let y = roomsPositions[ roomAmmount ].startY; y < roomsPositions[ roomAmmount ].endY; y++){
+                    
+                    for(let x = roomsPositions[ roomAmmount ].startX; x <= roomsPositions[ roomAmmount ].endX ; x++){
+                        for(let y = roomsPositions[ roomAmmount ].startY; y <= roomsPositions[ roomAmmount ].endY; y++){
 
-                            if(x === roomsPositions[ roomAmmount ].startX || x === roomsPositions[ roomAmmount ].endX -1 || y === roomsPositions[ roomAmmount ].startY || y === roomsPositions[ roomAmmount ].endY - 1 ){
+                            if(x === roomsPositions[ roomAmmount ].startX || x === roomsPositions[ roomAmmount ].endX  || y === roomsPositions[ roomAmmount ].startY || y === roomsPositions[ roomAmmount ].endY  ){
                                 tempMap[ this.mapToTile(x, y) ] = this.blockTypes.wall.id;
                             }else{
                                 tempMap[ this.mapToTile(x, y) ] = this.blockTypes.ground.id;
@@ -323,17 +341,49 @@ class GameMap {
                             
                         }
                     }
-                    
-                    this.playerSpawnPoint = [
-                        Math.floor((roomsPositions[ roomAmmount ].endX -1 + roomsPositions[ roomAmmount ].startX ) / 2)
-                        ,
-                        Math.floor((roomsPositions[ roomAmmount ].endY -1 + roomsPositions[ roomAmmount ].startY) / 2)
-                    ];
+                    if(this.playerSpawnPoint === undefined){
+                        this.playerSpawnPoint = [
+                            Math.floor((roomsPositions[ roomAmmount ].endX -1 + roomsPositions[ roomAmmount ].startX ) / 2)
+                            ,
+                            Math.floor((roomsPositions[ roomAmmount ].endY -1 + roomsPositions[ roomAmmount ].startY) / 2)
+                        ];
+                    }
                     roomAmmount++;
                 }
             }
+            tries++;
+            if(tries > 100){
+                roomAmmount = maxRoomAmmount;
+            }
         }
 
+        //generate Items
+
+        //generate tunnels between rooms
+        while(!(tunnelsDone)){
+            //pick a wall to drill a hole in the X axis
+            let randX = Math.floor(Math.random() * (roomsPositions[counter].endX  - roomsPositions[counter].startX) + roomsPositions[counter].startX );
+            let randY;
+            //roll a dice to decide if hole should be on the top or bottom row of the wall
+            if(Math.round(Math.random()) === 0){
+                randY = roomsPositions[counter].startY;
+            }else{
+                randY = roomsPositions[counter].endY ;
+            }
+
+            //if the X point landed on one of the corners of the cube, (start point and end point) re-roll the Y value to be something along the left or right walls
+            if(randX === roomsPositions[counter].startX || randX === roomsPositions[counter].endX){
+                randY = Math.floor(Math.random() * ((roomsPositions[counter].endY ) - roomsPositions[counter].startY) + (roomsPositions[counter].startY ));
+                console.log("cont:",counter,"y",randY);
+            }
+            console.log("hole:",randX,randY);
+            tempMap[ this.mapToTile(randX,randY) ] = this.blockTypes.ground.id;
+            counter++;
+            if(counter >= roomsPositions.length){
+                console.log("tunels done");
+                tunnelsDone = true;
+            }
+        }
         return [tempMap, tempContent];
     }
     mapToTile(x, y) {
@@ -342,6 +392,26 @@ class GameMap {
     setCanvasSize() {
         this.canvasW = (this.cameraW * this.tileW) * this.scale;
         this.canvasH = (this.cameraH * this.tileH) * this.scale;
+    }
+
+    areBoxColliding(aStartX,aStartY,aEndX,aEndY,bStartX,bStartY,bEndX,bEndY){
+        
+        
+        
+        if(aStartX >= bStartX && aStartX <= bEndX || aStartY >= bStartY && aStartY <= bEndY ||
+            aEndX >= bStartX && aEndX <= bEndX || aEndY >= bStartY && aEndY <= bEndY
+            )
+        {
+            return true;
+        }
+        /*
+        console.log("aEndX < bStartX",aEndX < bStartX ," &&", "aEndY < bStartY", aEndY < bStartY ,"||", "aStartX > bEndX",aStartX > bEndX ,"&&", "aStartY > bEndY",aStartY > bEndY);
+        if( !(aEndX < bStartX && aEndY < bStartY || aStartX > bEndX && aStartY > bEndY) ){
+            console.log("collision false");
+            return false;
+        }
+        */
+        return false;
     }
 
     getTileStructIDfromCoords(x, y) { //returns the ID of the block stored on that coordinate

@@ -258,10 +258,12 @@ class Character extends Entity {
         }
     }
     move(positionX = 0, positionY = 0) {
+
         let newCoords = this.calculateMovingCoords(positionX, positionY);
         if (newCoords === false) {
             return;
         }
+        
         this.changePosition(newCoords[0], newCoords[1]);
     }
 
@@ -277,6 +279,13 @@ class Character extends Entity {
         }
         if (positionY !== undefined) {
             newCoords[1] = this.positionY + positionY;
+        }
+
+        if(newCoords[0] < 0 || newCoords[1] < 0 || newCoords[0] >= this.gameRef.mapW || newCoords[1] >= this.gameRef.mapH ){
+            return false;
+        }
+        if(this.noclip){
+            return newCoords;
         }
 
         if (this.gameRef.gameMap.isTileSolid(newCoords[0], newCoords[1])) {
@@ -877,7 +886,7 @@ class Game {
 
     draw() {
         //Draw graphics on canvas
-        this.ctx.fillStyle = "black";
+        this.ctx.fillStyle = "#1a1c26";
         this.ctx.rect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
         this.ctx.fill();
         let currentSecond = 0, frameCount = 0, framesLastSecond = 0, lastFrameTime = 0;
