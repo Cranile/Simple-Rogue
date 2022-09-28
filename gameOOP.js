@@ -2,9 +2,10 @@ class Entity {
     constructor(name = "entity", x = 0, y = 0, entityType, charType, game, globalID) {
         this.name = name;
 
-        this.baseHp = charType.hp;
-        this.maxHp = charType.hp;
-        this.currentHp = this.maxHp;
+        this.baseHp = charType.hp; // the "natural" ammount an entity has, this doesnt count equipment or buffs
+        this.baseMaxHp = charType.hp; // the "natural" maximum ammount of hp an entity can have, this doesnt count equipement or buffs
+        this.currentHp = this.baseMaxHp; // the ammount of health points the entity has at the moment
+        this.currentMaxHP = this.baseMaxHp; // the current maximum ammount of hp an entity has, this includes equipements and buffs
 
         this.maxMp = charType.mp;
 
@@ -58,19 +59,19 @@ class Entity {
     }
 
     changeHealth(hp) {
-        this.actualhp += hp;
-
-        if (this.actualhp > this.maxHp) {
-            this.actualhp = this.maxHp;
+        this.currentHp = this.currentHp + hp;
+        
+        if (this.currentHp > this.currentMaxHP) {
+            this.currentHp = this.currentMaxHP;
         }
 
-        if (this.actualhp <= 0) {
+        if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
         }
 
     }
 
-    attackOnSelf(damageInput) {
+    recieveDamage(damageInput) {
         if (damageInput > 0) {
             this.currentHp -= damageInput;
             console.log(this.name, "recieved:", damageInput, " damage");
@@ -79,13 +80,14 @@ class Entity {
         if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
         }
+
     }
+    
     attackOnOther(damageOutput, target) {
         if (damageOutput === undefined || target === undefined) {
             console.error("Parameters cant be undefined", damageOutput, target);
             return;
         }
-        target.attackOnSelf(damageOutput);
     }
 
     get position() {
@@ -95,7 +97,7 @@ class Entity {
         return [this.currentHp];
     }
     get health() {
-        return [this.currentHp, this.maxHp]
+        return [this.currentHp, this.currentMaxHP]
     }
     get readDescription() {
         if (this.description !== undefined) {
@@ -110,7 +112,7 @@ class Entity {
         this.name = newName;
     }
     set maxHealth(hp) {
-        this.maxHp = hp;
+        this.baseMaxHp = hp;
     }
     set description(text) {
         this.description = text;
@@ -130,6 +132,8 @@ class Character extends Entity {
         this.inventory = [];
         this.chestArmorLvl = 0;
         this.weaponLvl = 0;
+
+        this.potionAmmount = 0;
 
         this.keysIndex = []; // store the key indentifier
 
@@ -157,29 +161,40 @@ class Character extends Entity {
         let emptySlot = undefined;
         newitem.id = item;
         newitem.ammount = ammount;
-        if (this.inventory.length === 0) {
-
+        if (this.inventory.length === 0 || this.inventory.length === 1 && this.inventory[0] === undefined) {
             this.inventory[0] = newitem;
+            if(newitem.id === this.gameRef.entitiesList.potion.id){
+                this.potionAmmount += newitem.ammount;
+            }
         } else {
 
             for (let i = 0; i < this.inventory.length; i++) {
+                console.log(i);
                 if (this.inventory[i] === undefined) {
-
+                    console.log("found undefined",i);
                     emptySlot = i;
-                }
-                if (this.inventory[i].id === newitem.id) {
-
+                    break;
+                }else if (this.inventory[i].id === newitem.id) {
+                    if(newitem.id === this.gameRef.entitiesList.potion.id){
+                        this.potionAmmount += newitem.ammount;
+                    }
                     this.inventory[i].ammount += newitem.ammount;
-
+                    return;
                 }
             }
             if (emptySlot === undefined) {
                 //if no free slots have been found, open a new one
-
+                console.log("open new slot");
                 this.inventory[this.inventory.length] = newitem;
+                if(newitem.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount += newitem.ammount;
+                }
             } else {
-
+                console.log("use old");
                 this.inventory[emptySlot] = newitem;
+                if(newitem.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount += newitem.ammount;
+                }
             }
         }
         let tempItem = this.gameRef.entitiesListById[item];
@@ -195,8 +210,8 @@ class Character extends Entity {
                 return;
             }
             this.chestArmorLvl = item.stats.level;
-            this.maxHp = this.baseHp + item.stats.health;
-            this.currentHp = this.maxHp;
+            this.currentMaxHP = this.baseHp + item.stats.health;
+            this.currentHp = this.currentMaxHP;
         }
         if (item.category === "weapon") {
             if (item.stats.level < this.weaponLvl) {
@@ -206,6 +221,27 @@ class Character extends Entity {
             this.weaponLvl = item.stats.level;
             this.actualDmg = this.baseDmg + item.stats.damage;
             this.actualSpd = this.baseSpd + item.stats.speed;
+        }
+    }
+    removeItemFromInventory(item){
+        for(let i = 0; i < this.inventory.length; i++){
+            if(this.inventory[ i ].id === item.id){
+                if(this.inventory[ i ].ammount > 1){
+                    this.inventory[ i ].ammount -= 1; //reduce current ammount of that item
+                }else{
+                    this.inventory [ i ] = undefined; //delete from inventory
+                }
+                if(item.id === this.gameRef.entitiesList.potion.id){
+                    this.potionAmmount -= 1;
+                }
+            }
+        }
+    }
+    hasItemOnInv(item){
+        for(let i = 0; i < this.inventory.length; i++){
+            if(this.inventory[ i ].id === item.id){
+                return true;
+            }
         }
     }
     move(positionX = 0, positionY = 0) {
@@ -267,7 +303,21 @@ class Character extends Entity {
         }
         console.log("no item to pickup");
     }
-
+    consumePotion(){
+        let potion = this.gameRef.entitiesList.potion
+        if(this.currentHp === this.currentMaxHP){
+            console.log("health is full");
+            return;
+        }
+        if(this.hasItemOnInv(potion)){
+            console.log("take potion");
+            this.changeHealth(potion.heal);
+            this.removeItemFromInventory(potion);
+            return;
+        }
+        console.log("no potion avaliabe");
+        return;
+    }
     hasKey(keycode) {
         for (let i = 0; i < this.keysIndex.length; i++) {
             if (this.keysIndex[i] === keycode) {
@@ -276,7 +326,39 @@ class Character extends Entity {
         }
         return false;
     }
+
+
+    recieveDamage(damageInput,attackerID) {
+        if (damageInput > 0) {
+            this.currentHp -= damageInput;
+            console.log(this.name, "recieved:", damageInput, " damage");
+        }
+
+        if (this.currentHp <= 0) {
+            console.log(this.name, " is dead.");
+            return;
+        }
+
+        //counterattack if other attacked
+        if(attackerID !== this.entityGlobalID){
+            console.log("attacker",this.gameRef.entitiesIndex.get(attackerID),attackerID);
+            this.attackOnOther(this.gameRef.entitiesIndex.get(attackerID),attackerID);
+        }
+    }
+
+    attackOnOther(target, attacker=false) {
+        if (target === undefined) {
+            console.error("Parameters cant be undefined", target);
+            return;
+        }
+        if(attacker !== false){
+            target.recieveDamage(this.actualDmg,attacker);
+            return
+        }
+        target.recieveDamage(this.actualDmg,this.entityGlobalID);
+    }
 }
+
 class Structure extends Entity {
     constructor(name = "Character", x, y, entityType, charType, game, globalID) {
         super(name, x, y, entityType, charType, game, globalID);
@@ -335,7 +417,6 @@ class Structure extends Entity {
 class Player extends Character {
     constructor(name, x, y, entityType, charType, game, globalID) {
         super(name, x, y, entityType, charType, game, globalID);
-
     }
 
     init() {
@@ -369,6 +450,9 @@ class Player extends Character {
             case "KeyA":
                 this.move(-1);
                 break;
+            case "KeyQ":
+                this.consumePotion();
+                break;
             case "KeyE":
                 this.pickupItem();
                 break;
@@ -398,7 +482,7 @@ class Player extends Character {
                 console.log("enemy is already dead, loot?");
                 return;
             }
-            this.attackOnOther(this.actualDmg, target);
+            this.attackOnOther(target);
             return;
         }
 
@@ -616,7 +700,7 @@ class Game {
             "rogue": {
                 "hp": 8,
                 "mp": 5,
-                "dmg": 10,
+                "dmg": 8,
                 "spd": 10,
             },
             "mage": {
@@ -745,6 +829,20 @@ class Game {
         let text = hp[0] + " / " + hp[1];
         this.ctx.fillText(text, originX + 2, originY + 19);
 
+        //potions list
+        let xfromHealth = 20, yfromHealth = 20;
+        let listwidth = 100, listheight = 40;
+        this.ctx.beginPath();
+        this.ctx.fillStyle = "gray";
+        this.ctx.rect(originX , originY + yfromHealth + (listheight / 2), listwidth, listheight);
+        this.ctx.fill();
+
+        //health numbers
+        this.ctx.beginPath();
+        this.ctx.font = "16px Arial";
+        this.ctx.fillStyle = "black";
+        let potionlisttext = "Potions: " + this.player.potionAmmount;
+        this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
         requestAnimationFrame(() => this.draw());
     }
 
@@ -954,7 +1052,7 @@ class CharacterModal extends Modal {
         let texts = [
             "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg,
             "weapon level: " + this.player.weaponLvl,
-            "base health: " + this.player.baseHp + " + " + (this.player.maxHp - this.player.baseHp) + " = " + this.player.maxHp,
+            "base health: " + this.player.baseHp + " + " + (this.player.currentMaxHP - this.player.baseHp) + " = " + this.player.currentMaxHP,
             "armor level: " + this.player.chestArmorLvl,
             "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd
         ]
