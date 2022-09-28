@@ -2,7 +2,6 @@ class Entity {
     constructor(name = "entity", x = 0, y = 0, entityType, charType, game, globalID) {
         this.name = name;
 
-        this.baseHp = charType.hp; // the "natural" ammount an entity has, this doesnt count equipment or buffs
         this.baseMaxHp = charType.hp; // the "natural" maximum ammount of hp an entity can have, this doesnt count equipement or buffs
         this.currentHp = this.baseMaxHp; // the ammount of health points the entity has at the moment
         this.currentMaxHP = this.baseMaxHp; // the current maximum ammount of hp an entity has, this includes equipements and buffs
@@ -30,13 +29,14 @@ class Entity {
 
     }
 
-    draw(ctx, x, y) {
+    draw(ctx, x, y, offsetX, offsetY) {
         if (x === this.positionX && y === this.positionY) {
+            
             ctx.drawImage(
                 this.gameRef.tileset,
                 this.entitySpecs.sprite.x, this.entitySpecs.sprite.y,
                 this.entitySpecs.sprite.w, this.entitySpecs.sprite.h,
-                (x * this.gameRef.tileW) * this.scale, (y * this.gameRef.tileH) * this.scale,
+                (offsetX + x * this.gameRef.tileW) * this.scale, (offsetY + y * this.gameRef.tileH) * this.scale,
                 this.gameRef.tileW * this.scale, this.gameRef.tileH * this.scale
             );
             /*
@@ -66,7 +66,7 @@ class Entity {
         }
 
         if (this.currentHp <= 0) {
-            console.log(this.name, " is dead.");
+            this.onDeath();
         }
 
     }
@@ -90,6 +90,9 @@ class Entity {
         }
     }
 
+    onDeath(){
+        console.log(this.name, " is dead.");
+    }
     get position() {
         return [this.positionX, this.positionY];
     }
@@ -134,6 +137,16 @@ class Character extends Entity {
         this.weaponLvl = 0;
 
         this.potionAmmount = 0;
+
+        this.xpUntilNextLvl = 5;
+        this.currentXP = 0;
+        this.xpScaling = 2; //every time a level up happens, the xp until next level gets multiplied by this scaling.
+        this.currentLvl = 1;
+        this.maxLevel = 10;
+
+        this.xpValue = 2 * this.currentLvl; // the ammount of xp this entity gives when killed
+
+        this.lastHitBy; //keeps track on which entity hit this entity.
 
         this.keysIndex = []; // store the key indentifier
 
@@ -210,7 +223,7 @@ class Character extends Entity {
                 return;
             }
             this.chestArmorLvl = item.stats.level;
-            this.currentMaxHP = this.baseHp + item.stats.health;
+            this.currentMaxHP = this.baseMaxHp + item.stats.health;
             this.currentHp = this.currentMaxHP;
         }
         if (item.category === "weapon") {
@@ -255,6 +268,7 @@ class Character extends Entity {
     calculateMovingCoords(positionX = 0, positionY = 0) { //TILE based movement
         //check if it can move to desired pos
         //check if colliding with enemy, call attack
+        
         let newCoords = [this.positionX, this.positionY];
 
         //the if check is because the recieved data could be undefined, by not moving on some axis, then it stays the same
@@ -266,7 +280,7 @@ class Character extends Entity {
         }
 
         if (this.gameRef.gameMap.isTileSolid(newCoords[0], newCoords[1])) {
-
+            
             return false;
         }
         let interactableObj = this.gameRef.hasEntityOnPos(newCoords[0], newCoords[1]);
@@ -327,8 +341,45 @@ class Character extends Entity {
         return false;
     }
 
+    onDeath(){
+        console.log(this.name,"was killed by",this.gameRef.entitiesIndex.get(this.lastHitBy).name );
+        this.gameRef.entitiesIndex.get(this.lastHitBy).recieveXP(this.xpValue);
+    }
+    recieveXP(xpAmmount){
+        if(this.currentLvl >= this.maxLevel){
+            return;
+        }
+        //this method will fail if entity recieves enough xp to level up multiple times
+        //a better way would need to pre define the "ranks" of xp until next level, and check how many the entity has surpased
+        this.currentXP += xpAmmount;
+        console.log(this.name," got ",xpAmmount," XP");
+        if(this.currentXP >= this.xpUntilNextLvl){
+            this.levelUp();
+        }
+    }
+    levelUp(){
+        let healthBonus = this.currentMaxHP - this.baseMaxHp;
+        console.log(healthBonus);
+        let dmgBonus = this.actualDmg - this.baseDmg;
+        console.log(dmgBonus);
 
+        this.currentLvl += 1;
+        this.xpUntilNextLvl = this.xpUntilNextLvl * this.xpScaling;
+        this.xpValue = 3 * this.currentLvl;
+
+        console.log(this.name," has leveled up, now is level:",this.currentLvl);
+
+        this.baseDmg += this.currentLvl;
+        this.baseMaxHp += this.currentLvl;
+        
+        // update current stats
+        this.currentMaxHP = this.baseMaxHp + healthBonus;
+        this.currentHp = this.currentMaxHP;
+        this.actualDmg = this.baseDmg + dmgBonus;
+    }
+    
     recieveDamage(damageInput,attackerID) {
+        this.lastHitBy = attackerID;
         if (damageInput > 0) {
             this.currentHp -= damageInput;
             console.log(this.name, "recieved:", damageInput, " damage");
@@ -336,9 +387,9 @@ class Character extends Entity {
 
         if (this.currentHp <= 0) {
             console.log(this.name, " is dead.");
+            this.onDeath();
             return;
         }
-
         //counterattack if other attacked
         if(attackerID !== this.entityGlobalID){
             console.log("attacker",this.gameRef.entitiesIndex.get(attackerID),attackerID);
@@ -440,15 +491,19 @@ class Player extends Character {
         switch (event.code) {
             case "KeyW":
                 this.move(0, -1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyS":
                 this.move(0, 1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyD":
                 this.move(1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyA":
                 this.move(-1);
+                this.gameRef.camera.update(this.positionX ,this.positionY );
                 break;
             case "KeyQ":
                 this.consumePotion();
@@ -493,7 +548,59 @@ class Player extends Character {
         return;
     }
 }
+class Camera {
+    constructor(canvasW,canvasH,game){
+        this.gameRef = game;
+        //size of the camera
+        this.x = canvasW;
+        this.y = canvasH;
+        //what are the first tiles to be drawn
+        this.startTileX = 0;
+        this.startTileY = 0;
+        //what are the last tiles to be drawn
+        this.endTileX = 0;
+        this.endTileY = 0;
 
+        this.offsetX;
+        this.offsetY;
+
+        this.init();
+    }
+
+    init(){
+
+    }
+
+    update(x,y){
+        this.offsetX = Math.floor((this.x / 2) - (x * this.gameRef.tileW) + (this.gameRef.tileW / 2));
+        
+        this.offsetY = Math.floor((this.y / 2) - (y * this.gameRef.tileH) + (this.gameRef.tileH / 2));
+
+        let tileX = Math.floor(x / this.gameRef.tileW);
+        let tileY = Math.floor(y / this.gameRef.tileH);
+
+        this.startTileX = tileX - 1 - Math.ceil( (this.x / 2) );
+        this.startTileY = tileY - 1 - Math.ceil( (this.y / 2)  );
+
+        if(this.startTileX < 0){
+            this.startTileX = 0;
+        }
+        if(this.startTileY < 0){
+            this.startTileY = 0;
+        }
+        this.endTileX = tileX + 1 + Math.ceil(this.x / 2) ;
+        this.endTileY = tileY + 1 + Math.ceil(this.y / 2) ;
+
+        if(this.endTileX >= this.gameRef.mapW){
+            this.endTileX = this.gameRef.mapW ;
+        }
+        if(this.endTileY >= this.gameRef.mapH){
+            this.endTileY = this.gameRef.mapH ;
+        }
+    }
+
+
+}
 class Game {
     //all interactables must be of type entity, NPCs, Items and structures like doors or stairs
     //these should be stored on the same database, separated from actual structures like ground or walls
@@ -527,11 +634,14 @@ class Game {
         this.canvasName = canvasName;
         this.gameCanvas;
 
-        this.canvasW;
-        this.canvasH;
+        this.canvasW ;
+        this.canvasH ;
         this.ctx;
 
         this.fov; //field of view is the area the player can see, this implementation dosn't take into account walls, so player can se through, this doesn't save previously seen areas(fog of war)
+
+        this.cameraW = 35;
+        this.cameraH = 25;
         this.menues = {
             "inventory": false,
             "character": false
@@ -721,7 +831,7 @@ class Game {
 
     async setMap() {
         return new Promise((resolve) => {
-            resolve(new GameMap(this.tileW, this.tileH, this.scale, this.mapW, this.mapH, this));
+            resolve(new GameMap(this.tileW, this.tileH, this.scale, this.mapW, this.mapH, this.cameraW, this.cameraH, this));
         });
     }
     async init() {
@@ -750,12 +860,15 @@ class Game {
         this.gameCanvas.height = canvasSize[1];
 
         this.player = new Player("player", 5, 5, this.entitiesList.player, this.characterTypes.warrior, this, this.entityCount);
+        this.camera = new Camera(this.canvasW,this.canvasH,this);
+        this.camera.update(this.player.positionX, this.player.positionY );
         this.addNewEntity(this.player);
-        this.fov = 5;
+        this.fov = 1000;
 
         this.ctx.imageSmoothingEnabled = false; //if this is set before resizing, pixels get blurry
         this.draw();
 
+        window.addEventListener("click", event => this.clickHandler(event) );
     }
 
     update() {
@@ -764,12 +877,15 @@ class Game {
 
     draw() {
         //Draw graphics on canvas
-        this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        this.ctx.fillStyle = "black";
+        this.ctx.rect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+        this.ctx.fill();
         let currentSecond = 0, frameCount = 0, framesLastSecond = 0, lastFrameTime = 0;
-        for (let y = 0; y < this.mapH; y++) {
-            for (let x = 0; x < this.mapW; x++) {
 
-                this.gameMap.draw(this.ctx, x, y);
+        for (let y = this.camera.startTileY; y < this.camera.endTileY; y++) {
+            for (let x = this.camera.startTileY; x < this.camera.endTileX; x++) {
+
+                this.gameMap.draw(this.ctx, x, y, this.camera.offsetX, this.camera.offsetY);
                 if (
                     y <= this.player.positionY + this.fov &&
                     y >= this.player.positionY - this.fov &&
@@ -777,10 +893,10 @@ class Game {
                     x >= this.player.positionX - this.fov
                 ) {
                     this.entitiesIndex.forEach(entity => {
-                        entity.draw(this.ctx, x, y);
+                        entity.draw(this.ctx, x, y, this.camera.offsetX, this.camera.offsetY);
                     });
                 }
-
+                
             }
         }
         // INVENTORY UI
@@ -843,6 +959,7 @@ class Game {
         this.ctx.fillStyle = "black";
         let potionlisttext = "Potions: " + this.player.potionAmmount;
         this.ctx.fillText(potionlisttext, originX , originY + yfromHealth + listheight );
+        
         requestAnimationFrame(() => this.draw());
     }
 
@@ -884,6 +1001,9 @@ class Game {
             return [this.keysIndex.get(keycode), keycode];
         }
         return false;
+    }
+    clickHandler(event){
+        console.log(event.offsetX,event.offsetY);
     }
 }
 
@@ -1052,9 +1172,11 @@ class CharacterModal extends Modal {
         let texts = [
             "base damage: " + this.player.baseDmg + " + " + (this.player.actualDmg - this.player.baseDmg) + " = " + this.player.actualDmg,
             "weapon level: " + this.player.weaponLvl,
-            "base health: " + this.player.baseHp + " + " + (this.player.currentMaxHP - this.player.baseHp) + " = " + this.player.currentMaxHP,
+            "base health: " + this.player.baseMaxHp + " + " + (this.player.currentMaxHP - this.player.baseMaxHp) + " = " + this.player.currentMaxHP,
             "armor level: " + this.player.chestArmorLvl,
-            "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd
+            "base attack speed: " + this.player.baseSpd + " + " + (this.player.actualSpd - this.player.baseSpd) + " = " + this.player.actualSpd,
+            "Level: " + this.player.currentLvl,
+            "XP: " + this.player.currentXP + " / " + this.player.xpUntilNextLvl,
         ]
 
         for (const [i, text] of texts.entries()) {
