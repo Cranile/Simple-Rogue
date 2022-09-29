@@ -360,30 +360,47 @@ class GameMap {
         //generate Items
 
         //generate tunnels between rooms
-        while(!(tunnelsDone)){
-            //pick a wall to drill a hole in the X axis
-            let randX = Math.floor(Math.random() * (roomsPositions[counter].endX  - roomsPositions[counter].startX) + roomsPositions[counter].startX );
-            let randY;
-            //roll a dice to decide if hole should be on the top or bottom row of the wall
-            if(Math.round(Math.random()) === 0){
-                randY = roomsPositions[counter].startY;
-            }else{
-                randY = roomsPositions[counter].endY ;
-            }
 
-            //if the X point landed on one of the corners of the cube, (start point and end point) re-roll the Y value to be something along the left or right walls
-            if(randX === roomsPositions[counter].startX || randX === roomsPositions[counter].endX){
-                randY = Math.floor(Math.random() * ((roomsPositions[counter].endY ) - roomsPositions[counter].startY) + (roomsPositions[counter].startY ));
-                console.log("cont:",counter,"y",randY);
+        //pick a wall to drill a hole in the X axis
+        console.log("tunnels");
+        let currentX,currentY;
+        let nextRoomX,nextRoomY;
+        
+        for(let i = 0; i < roomsPositions.length; i++){
+            let directionX = 1, directionY = 1;
+            currentX = Math.floor((roomsPositions[i].endX -1 + roomsPositions[i].startX ) / 2); // start on the middle of current room
+            currentY = Math.floor((roomsPositions[i].endY -1 + roomsPositions[i].startY ) / 2);
+            // get which room is closer on total tiles and make bride towards that
+            console.log("tunnel :",i);
+            if(i < roomsPositions.length -1){
+                console.log("ttt:",i);
+                nextRoomX = Math.floor((roomsPositions[i + 1].endX -1 + roomsPositions[i + 1].startX ) / 2) // reach  the middle of the next room
+                nextRoomY = Math.floor((roomsPositions[i + 1].endY -1 + roomsPositions[i + 1].startY ) / 2)
+            }else{
+                console.log("not:",i);
+                nextRoomX = Math.floor((roomsPositions[0].endX -1 + roomsPositions[0].startX ) / 2) // reach  the middle of the next room
+                nextRoomY = Math.floor((roomsPositions[0].endY -1 + roomsPositions[0].startY ) / 2)
             }
-            console.log("hole:",randX,randY);
-            tempMap[ this.mapToTile(randX,randY) ] = this.blockTypes.ground.id;
-            counter++;
-            if(counter >= roomsPositions.length){
-                console.log("tunels done");
-                tunnelsDone = true;
+            
+            if(currentX > nextRoomX){
+                directionX = -1;
             }
+            
+            for(currentX; currentX !== nextRoomX; currentX += directionX){
+                console.log("x:",currentX);
+                tempMap[ this.mapToTile(currentX, currentY) ] = this.blockTypes.ground.id;
+            }
+            
+            if(currentY > nextRoomY){
+                directionY = -1;
+            }
+            
+            for(currentY; currentY !== nextRoomY; currentY += directionY){
+                tempMap[ this.mapToTile(currentX, currentY) ] = this.blockTypes.ground.id;
+            }
+            
         }
+
         return [tempMap, tempContent];
     }
     mapToTile(x, y) {
@@ -447,7 +464,11 @@ class GameMap {
     }
 
     isTileSolid(x, y) {
-        return this.blockTypesById[this.getTileStructIDfromCoords(x, y)].solid;
+        let temp = this.blockTypesById[this.getTileStructIDfromCoords(x, y)];
+        if(temp === undefined){
+            return true;
+        }
+        return temp.solid;
     }
     isInteractable(x, y) {
         let res = this.gameRef.entitiesListById[this.getTileContentIDfromCoords(x, y)];

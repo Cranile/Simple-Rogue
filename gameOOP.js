@@ -287,7 +287,6 @@ class Character extends Entity {
         if(this.noclip){
             return newCoords;
         }
-
         if (this.gameRef.gameMap.isTileSolid(newCoords[0], newCoords[1])) {
             
             return false;
