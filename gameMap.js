@@ -278,7 +278,7 @@ class GameMap {
         let tempContent = new Map();
 
         let roomAmmount = 0;
-        let maxRoomAmmount = 3;
+        let maxRoomAmmount = 10;
         let roomsPositions = ["s"];
 
         let tries = 0; //to prevent infinite map creation, if max tries are reached, create the map with less rooms
@@ -352,7 +352,7 @@ class GameMap {
                 }
             }
             tries++;
-            if(tries > 100){
+            if(tries > 1000){
                 roomAmmount = maxRoomAmmount;
             }
         }
@@ -362,7 +362,7 @@ class GameMap {
         //generate tunnels between rooms
 
         //pick a wall to drill a hole in the X axis
-        console.log("tunnels");
+        
         let currentX,currentY;
         let nextRoomX,nextRoomY;
         
@@ -371,13 +371,11 @@ class GameMap {
             currentX = Math.floor((roomsPositions[i].endX -1 + roomsPositions[i].startX ) / 2); // start on the middle of current room
             currentY = Math.floor((roomsPositions[i].endY -1 + roomsPositions[i].startY ) / 2);
             // get which room is closer on total tiles and make bride towards that
-            console.log("tunnel :",i);
+            
             if(i < roomsPositions.length -1){
-                console.log("ttt:",i);
                 nextRoomX = Math.floor((roomsPositions[i + 1].endX -1 + roomsPositions[i + 1].startX ) / 2) // reach  the middle of the next room
                 nextRoomY = Math.floor((roomsPositions[i + 1].endY -1 + roomsPositions[i + 1].startY ) / 2)
             }else{
-                console.log("not:",i);
                 nextRoomX = Math.floor((roomsPositions[0].endX -1 + roomsPositions[0].startX ) / 2) // reach  the middle of the next room
                 nextRoomY = Math.floor((roomsPositions[0].endY -1 + roomsPositions[0].startY ) / 2)
             }
@@ -387,7 +385,6 @@ class GameMap {
             }
             
             for(currentX; currentX !== nextRoomX; currentX += directionX){
-                console.log("x:",currentX);
                 tempMap[ this.mapToTile(currentX, currentY) ] = this.blockTypes.ground.id;
             }
             
