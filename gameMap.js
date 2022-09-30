@@ -203,7 +203,7 @@ class GameMap {
         }
 
         /*
-     Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
+        Doors are not necesary for the freecodecamp version of the game, this should be re implemented for the post freecodecamp version.
         while (hasdoor < 3) {
             randX = Math.floor(Math.random() * this.mapW);
             randY = Math.floor(Math.random() * this.mapH);
@@ -260,7 +260,7 @@ class GameMap {
         
         //add stair
         
-       while (!hasPlayerSpawn) {
+        while (!hasPlayerSpawn) {
            let randX = 10;
            let randY = 10;
            //add player spawn point
@@ -269,7 +269,7 @@ class GameMap {
                this.playerSpawnPoint = coords;
                hasPlayerSpawn = true;
            }
-       }
+        }
         return [tempMap, tempContent];
     }
 
@@ -284,14 +284,23 @@ class GameMap {
         let tries = 0; //to prevent infinite map creation, if max tries are reached, create the map with less rooms
         let notCollisionsCount; //add 1 for each box on the array for which the new box didnt collide, if at array.length === this var, then build new room
 
-        let tunnelsDone = false;
-        let counter = 0;
 
         let minRoomSize = 6;
         let maxRoomSize = 12;
 
-        let minItemsPerRoom = 2;
-        let maxItemsPerRoom = 6;
+        let minItemsPerRoom = 0;
+        let maxTotalItems = 20;
+        let maxItemsPerRoom = 3;
+
+        let items = [];
+        let randomGrounds = [];
+        let potions = 0;
+
+        let { sword, axe, heroSword, chestPlate, ironChestplate, steelChestplate } = this.gameRef.entitiesList;
+        let itemsToShow = [sword, axe, heroSword, chestPlate, ironChestplate, steelChestplate];
+        for (const item of itemsToShow) {
+            items.push({ id: item.id, show: false });
+        }
 
         let minTotalMonsters;
         let maxTotalMonsters;
@@ -311,8 +320,8 @@ class GameMap {
                 startY: randY,
                 endX: randX + roomSize,
                 endY: randY + roomSize,
+                totalSize: roomSize * roomSize,
             };
-
             for(let i = 0; i < roomsPositions.length ; i++){
                 
                 if(roomsPositions.length >= maxRoomAmmount){
@@ -322,21 +331,23 @@ class GameMap {
                     //console.log("not collision", notCollisionsCount, "roomcount: ",roomAmmount);
                     notCollisionsCount++;
                 }
-                if(roomsPositions.length <= 1 && roomsPositions[0] === "s" || notCollisionsCount >= roomsPositions.length  ){
+                if(roomsPositions.length <= 1 && roomsPositions[0] === "s" || notCollisionsCount >= roomsPositions.length ){
                     //console.log("creating new room,",roomAmmount);
                     roomsPositions[ roomAmmount ] = tempRoom;
                     tries = 0;
-                    console.log(roomsPositions);
-                    let currentTile = this.mapToTile(randX, randY);
                     
-                    for(let x = roomsPositions[ roomAmmount ].startX; x <= roomsPositions[ roomAmmount ].endX ; x++){
-                        for(let y = roomsPositions[ roomAmmount ].startY; y <= roomsPositions[ roomAmmount ].endY; y++){
+                    for(let x = roomsPositions[ roomAmmount ].startX; x < roomsPositions[ roomAmmount ].endX ; x++){
+                        for(let y = roomsPositions[ roomAmmount ].startY; y < roomsPositions[ roomAmmount ].endY; y++){
 
-                            if(x === roomsPositions[ roomAmmount ].startX || x === roomsPositions[ roomAmmount ].endX  || y === roomsPositions[ roomAmmount ].startY || y === roomsPositions[ roomAmmount ].endY  ){
+                            if(x === roomsPositions[ roomAmmount ].startX 
+                                || x === roomsPositions[ roomAmmount ].endX  -1
+                                || y === roomsPositions[ roomAmmount ].startY 
+                                || y === roomsPositions[ roomAmmount ].endY  -1
+                            ){
                                 tempMap[ this.mapToTile(x, y) ] = this.blockTypes.wall.id;
                             }else{
                                 tempMap[ this.mapToTile(x, y) ] = this.blockTypes.ground.id;
-
+                                randomGrounds.push(this.mapToTile(x, y));
                             }
                             
                         }
@@ -347,6 +358,7 @@ class GameMap {
                             ,
                             Math.floor((roomsPositions[ roomAmmount ].endY -1 + roomsPositions[ roomAmmount ].startY) / 2)
                         ];
+                        randomGrounds.pop( this.mapToTile(this.playerSpawnPoint[0], this.playerSpawnPoint[1]) )
                     }
                     roomAmmount++;
                 }
@@ -357,15 +369,21 @@ class GameMap {
             }
         }
 
-        //generate Items
+        let shuffle = (grounds) => {
+            return grounds
+                .map(value => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
+        }
+        randomGrounds = shuffle(randomGrounds);
+        maxItemsPerRoom = Math.round(maxTotalItems / roomsPositions.length);
+        
 
         //generate tunnels between rooms
-
-        //pick a wall to drill a hole in the X axis
-        
         let currentX,currentY;
         let nextRoomX,nextRoomY;
         
+        // tunels and items could be genretaed on the same for loop
         for(let i = 0; i < roomsPositions.length; i++){
             let directionX = 1, directionY = 1;
             currentX = Math.floor((roomsPositions[i].endX -1 + roomsPositions[i].startX ) / 2); // start on the middle of current room
@@ -396,6 +414,19 @@ class GameMap {
                 tempMap[ this.mapToTile(currentX, currentY) ] = this.blockTypes.ground.id;
             }
             
+        }
+
+        //generate Items
+        while (potions < 5) {
+            let tileIndex = randomGrounds.pop();
+            tempContent.set(tileIndex, this.gameRef.entitiesList.potion.id);
+            potions++;
+        }
+
+        for (const item of items) {
+            let tileIndex = randomGrounds.pop();
+            tempContent.set(tileIndex, item.id);
+            item.show = true;
         }
 
         return [tempMap, tempContent];
