@@ -429,10 +429,25 @@ class GameMap {
             item.show = true;
         }
 
+        
+        for (let i = 0; i < 5; i++) {
+            let tileIndex = randomGrounds.pop();
+            let coords = this.tileToMap(tileIndex);
+            let newenemy = new Character("enemy " + i, coords[0], coords[1], this.gameRef.entitiesList.goblin, this.gameRef.characterTypes.rogue, this.gameRef, this.gameRef.entityCount);
+            newenemy.setStanceToPlayer("enemy");
+            this.gameRef.addNewEntity(newenemy);   
+        }
+        
         return [tempMap, tempContent];
     }
     mapToTile(x, y) {
         return (this.mapW * y) + x;
+    }
+    tileToMap(tilenumber){
+        let x, y;
+        y = Math.floor(tilenumber / this.mapH);
+        x = Math.floor(tilenumber - (this.mapH * y));
+        return [x,y];
     }
     setCanvasSize() {
         this.canvasW = (this.cameraW * this.tileW) * this.scale;
