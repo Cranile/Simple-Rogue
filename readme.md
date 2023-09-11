@@ -2,9 +2,13 @@
 
 based on this [freecodecamp challenge](https://www.freecodecamp.org/learn/coding-interview-prep/take-home-projects/_build-a-roguelike-dungeon-crawler-game)  
 
+currently implemented features:
+Randomly generated rooms, enemies and loot.
+player movement
+attacking enemies (no way to tell damage dealt or if enemy is dead)
+
 missing features:  
 *healing.  
-*random or pseudo random map generation.  
 *XP and leveling system (leveling should increase stats).  
 *damage is random between a range. (remove for not codecamp version)  
 *final boss.  
